@@ -1,5 +1,5 @@
-/* Job Tracker offline cache. Build: 2.1.0-7d2f22b6c4 */
-const CACHE = "jt-phone-2.1.0-7d2f22b6c4";
+/* Job Tracker offline cache. Build: 2.1.1-f7e2439236 */
+const CACHE = "jt-phone-2.1.1-f7e2439236";
 const CORE = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 const CDN = ["https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css", "https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"];
 

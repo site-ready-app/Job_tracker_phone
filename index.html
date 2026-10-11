@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
-<script>window.JT_STATIC=true;window.JT_VERSION="2.1.0";</script>
+<script>window.JT_STATIC=true;window.JT_VERSION="2.1.1";</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
@@ -473,6 +473,7 @@ function showScreen(id){
   if(id==="stats-screen")renderStats();
 }
 
+let serverVersion="";
 const LOCAL=window.JT_STATIC===true;   // phone copy: data lives in this browser, no server
 const LS_DATA="jt_data", LS_META="jt_meta", LS_UNDO="jt_undo";
 function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
@@ -1248,7 +1249,8 @@ function openDataDialog(){
 }
 function refreshSyncStatus(){
   const m=getMeta();
-  document.getElementById("sync-status").textContent="Last sent: "+niceTime(m.lastSent)+" · Last received: "+niceTime(m.lastReceived);
+  document.getElementById("sync-status").textContent="Last sent: "+niceTime(m.lastSent)+" · Last received: "+niceTime(m.lastReceived)
+    +(LOCAL?" · App v"+(window.JT_VERSION||"?"):(serverVersion?" · Tracker program v"+serverVersion:""));
   let u=null;try{u=JSON.parse(lsGet(LS_UNDO)||"null");}catch(e){}
   const row=document.getElementById("sync-undo-row");
   row.style.display=u&&u.data?"flex":"none";
@@ -1370,8 +1372,13 @@ async function confirmSync(){
   if(!LOCAL){
     try{
       const r=await api("/api/backup",{method:"POST"});
-      if(!r.ok)throw new Error();
-    }catch(e){showToast("Could not make a safety copy first, so nothing was changed.","error");return;}
+      if(!r.ok){
+        const why=r.status===404||r.status===405
+          ?"The tracker program on this computer is out of date (it is version "+(serverVersion||"older")+"). Close it completely and start it again."
+          :await errorText(r,"The safety copy failed.");
+        throw new Error(why);
+      }
+    }catch(e){showToast((e.message||"The safety copy failed.")+" Nothing was changed.","error");return;}
   }
   lsSet(LS_UNDO,JSON.stringify({at:new Date().toISOString(),data:currentState()}));
   applyState(merged);
@@ -1479,6 +1486,7 @@ async function initConfig(){
     const r=await api("/api/config");
     if(!r.ok)return;
     const c=await r.json();
+    serverVersion=c.version||"";
     if(c.emailExport)document.getElementById("export-emails-btn").style.display="";
   }catch(e){}
 }
