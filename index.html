@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<script>window.JT_STATIC=true;window.JT_VERSION="2.1.0";</script>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Job Tracker">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a1a1a">
+<title>Job Tracker</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh;}
+.screen{display:none;width:100%;padding-bottom:2rem;}
+.screen.active{display:block;}
+.header{display:flex;align-items:center;gap:10px;padding:.75rem 2rem;background:#fff;border-bottom:1px solid #e8e8e4;position:sticky;top:0;z-index:10;}
+.header h1{font-size:18px;font-weight:600;flex:1;}
+.back-btn{background:none;border:none;cursor:pointer;color:#888;font-size:22px;padding:0;display:flex;align-items:center;}
+.body{padding:1rem 2rem;}
+.stat-row{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:1rem;}
+.stat{background:#fff;border-radius:10px;padding:.75rem 1rem;border:1px solid #e8e8e4;cursor:pointer;transition:border-color .15s;}
+.stat.active-filter{background:#1a1a1a;border-color:#1a1a1a;}
+.stat.active-filter .stat-label{color:#aaa;}
+.stat.active-filter .stat-val{color:#fff;}
+.stat-label{font-size:11px;color:#888;margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em;}
+.stat-val{font-size:22px;font-weight:600;}
+.toolbar{display:flex;gap:8px;margin-bottom:1rem;align-items:center;flex-wrap:wrap;}
+.search-box{flex:1;min-width:200px;position:relative;}
+.search-box input{width:100%;padding:8px 12px 8px 34px;border:1px solid #e0e0da;border-radius:8px;font-size:14px;background:#fff;outline:none;font-family:inherit;}
+.search-box input:focus{border-color:#999;}
+.search-box i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#aaa;font-size:16px;}
+.sort-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid #d8d8d2;background:#fff;color:#666;cursor:pointer;white-space:nowrap;font-weight:500;}
+.sort-btn.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}
+.filter-pill{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid #d8d8d2;background:#fff;color:#666;cursor:pointer;white-space:nowrap;font-weight:500;display:flex;align-items:center;gap:4px;}
+.filter-pill.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}
+.filter-pill.warning{border-color:#e67e22;color:#e67e22;}
+.filter-pill.warning.active{background:#e67e22;color:#fff;}
+#entry-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:10px;align-items:start;}
+.company-card{background:#fff;border:1px solid #e8e8e4;border-radius:10px;overflow:hidden;transition:border-color .15s;}
+.company-card:hover{border-color:#bbb;}
+.company-card.has-priority{border-left:3px solid #f5a623;}
+.company-header{display:flex;justify-content:space-between;align-items:center;padding:.5rem 1rem;gap:10px;}
+.company-name{font-size:14px;font-weight:600;white-space:nowrap;}
+.company-meta{font-size:12px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.company-badges{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.app-list{border-top:1px solid #f0f0eb;}
+.app-row{display:flex;align-items:center;gap:10px;padding:.35rem 1rem;border-bottom:1px solid #f8f8f4;font-size:12px;}
+.app-row:last-child{border-bottom:none;}
+.app-row.overdue{background:#fffbf5;}
+.app-role{flex:1;font-weight:500;color:#1a1a1a;}
+.app-dates{display:flex;gap:10px;color:#888;font-size:12px;flex-shrink:0;}
+.app-actions{display:flex;gap:6px;flex-shrink:0;}
+.btn-sm{font-size:11px;padding:3px 8px;border:1px solid #d0d0ca;border-radius:6px;background:#fff;cursor:pointer;font-family:inherit;}
+.btn-sm:hover{background:#f5f5f0;}
+.btn-sm-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}
+.btn-sm-primary:hover{background:#333;}
+.add-app-row{padding:.6rem 1.25rem;background:#f8f8f4;}
+.badge{font-size:11px;padding:3px 9px;border-radius:20px;white-space:nowrap;font-weight:600;}
+.b-waiting{background:#e8f2fb;color:#1a6fb5;}
+.b-replied{background:#fef3e2;color:#b57a00;}
+.b-interview{background:#ede8fb;color:#5b3fbf;}
+.b-offer{background:#e8f5e8;color:#2d7a2d;}
+.b-rejection{background:#fbe8e8;color:#c0392b;}
+.b-withdrawn{background:#f0f0eb;color:#666;}
+.li-pill{font-size:11px;background:#e8f2fb;color:#1a6fb5;border-radius:20px;padding:2px 8px;font-weight:500;}
+.priority-badge{font-size:11px;background:#fff8e6;color:#b8860b;border-radius:20px;padding:2px 8px;font-weight:500;border:1px solid #f5a623;}
+.archived-pill{font-size:11px;background:#f0f0eb;color:#888;border-radius:20px;padding:2px 8px;font-weight:500;}
+.overdue-pill{font-size:11px;background:#fef3e2;color:#e67e22;border-radius:20px;padding:2px 8px;font-weight:500;}
+.reminder-pill{font-size:11px;background:#e8f5e8;color:#2d7a2d;border-radius:20px;padding:2px 8px;font-weight:500;}
+.reminder-pill.due{color:#e67e22;background:#fef3e2;}
+.reminder-pill.overdue-r{color:#c0392b;background:#fbe8e8;}
+.star-btn{background:none;border:none;cursor:pointer;font-size:18px;padding:0;line-height:1;color:#ddd;}
+.star-btn.starred{color:#f5a623;}
+.star-btn:hover{background:none;color:#f5a623;}
+.form-group{margin-bottom:1rem;}
+.form-group label{display:block;font-size:13px;color:#666;margin-bottom:4px;font-weight:500;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;border:1px solid #e0e0da;border-radius:8px;font-size:14px;background:#fff;color:#1a1a1a;outline:none;font-family:inherit;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#999;}
+.form-group textarea{height:80px;resize:vertical;}
+.checkbox-row{display:flex;align-items:center;gap:16px;padding:.75rem 0;border-top:1px solid #f0f0eb;margin-top:.25rem;flex-wrap:wrap;}
+.checkbox-row label{font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px;}
+.checkbox-row input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:#1a1a1a;}
+button{padding:10px 16px;border:1px solid #d0d0ca;border-radius:8px;font-size:14px;background:#fff;color:#1a1a1a;cursor:pointer;font-family:inherit;font-weight:500;transition:background .15s;}
+button:hover{background:#f5f5f0;}
+.btn-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}
+.btn-primary:hover{background:#333;}
+.btn-danger{color:#c0392b !important;border-color:#f0b0aa !important;}
+.btn-warning{color:#e67e22 !important;border-color:#f5cba7 !important;}
+.btn-row{display:flex;gap:8px;margin-top:1.5rem;flex-wrap:wrap;}
+.btn-row button{flex:1;}
+.section-label{font-size:11px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;margin-top:1.5rem;}
+.empty{text-align:center;padding:3rem 1rem;color:#aaa;}
+.event-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem;}
+.event-card{background:#f8f8f4;border-radius:8px;padding:.5rem .75rem;display:inline-flex;align-items:flex-start;gap:8px;width:fit-content;max-width:360px;}
+.event-card-body{flex:1;min-width:0;}
+.event-header{display:flex;align-items:center;gap:8px;margin-bottom:2px;white-space:nowrap;}
+.event-type{font-size:12px;font-weight:600;}
+.event-date{font-size:11px;color:#999;}
+.event-notes{font-size:11px;color:#666;margin-top:2px;white-space:normal;}
+.event-delete{background:none;border:none;cursor:pointer;color:#ccc;font-size:16px;padding:0;line-height:1;flex-shrink:0;margin-top:1px;}
+.event-delete:hover{color:#c0392b;background:none;}
+.form-two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.form-three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
+.nav-tabs{display:flex;gap:0;border-bottom:1px solid #e8e8e4;margin-bottom:1.5rem;}
+.nav-tab{padding:.6rem 1.25rem;font-size:13px;font-weight:500;color:#888;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
+.nav-tab.active{color:#1a1a1a;border-bottom-color:#1a1a1a;}
+.tab-content{display:none;}.tab-content.active{display:block;}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
+.stats-card{background:#fff;border:1px solid #e8e8e4;border-radius:12px;padding:1.25rem;}
+.stats-card h3{font-size:13px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:1rem;}
+.stats-number{font-size:36px;font-weight:700;}
+.stats-sub{font-size:12px;color:#888;margin-top:2px;}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;}
+.bar-label{width:130px;color:#666;flex-shrink:0;font-size:12px;}
+.bar-wrap{flex:1;background:#f0f0eb;border-radius:4px;height:8px;overflow:hidden;}
+.bar-fill{height:8px;border-radius:4px;}
+.bar-count{width:30px;text-align:right;color:#888;font-size:12px;}
+.status-banner{background:#e8f5e8;color:#2d7a2d;font-size:12px;padding:6px 2rem;font-weight:500;display:flex;align-items:center;gap:6px;}
+.detail-field{margin-bottom:.875rem;}
+.detail-field-label{font-size:12px;color:#999;margin-bottom:2px;font-weight:500;}
+.detail-field-val{font-size:14px;}
+.app-detail-header{background:#f8f8f4;border-radius:10px;padding:1rem;margin-bottom:1rem;}
+.overdue-alert{background:#fef3e2;border:1px solid #f5cba7;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1rem;}
+.overdue-alert h3{font-size:13px;font-weight:600;color:#e67e22;margin-bottom:.5rem;display:flex;align-items:center;gap:6px;}
+.overdue-item{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:13px;border-bottom:1px solid #f5cba7;}
+.overdue-item:last-child{border-bottom:none;}
+.apps-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e8e8e4;border-radius:10px;overflow:hidden;font-size:13px;}
+.apps-table th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#888;background:#f8f8f4;padding:.6rem 1rem;border-bottom:1px solid #e8e8e4;white-space:nowrap;}
+.apps-table td{padding:.55rem 1rem;border-bottom:1px solid #f0f0eb;vertical-align:middle;}
+.apps-table tbody tr{cursor:pointer;}
+.apps-table tbody tr:hover{background:#f8f8f4;}
+.apps-table tbody tr:last-child td{border-bottom:none;}
+.apps-table tbody tr.overdue-row{background:#fffbf5;}
+.apps-table td.col-role{font-weight:500;}
+.apps-table td.col-muted{color:#888;}
+#toast-container{position:fixed;bottom:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+.toast{background:#1a1a1a;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.18);opacity:0;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease;display:flex;align-items:center;gap:8px;max-width:320px;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.toast-success{background:#2d7a2d;}
+.toast.toast-error{background:#c0392b;}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.spin{animation:spin 1s linear infinite;display:inline-block;}
+dialog#data-dialog{margin:auto;max-height:calc(100vh - 2rem);overflow:auto;border:1px solid #d0d0ca;border-radius:12px;padding:1.25rem 1.5rem;max-width:520px;width:calc(100% - 2rem);box-shadow:0 12px 40px rgba(0,0,0,.25);color:#1a1a1a;}
+dialog#data-dialog::backdrop{background:rgba(0,0,0,.4);}
+#data-dialog h2{font-size:17px;margin-bottom:.4rem;}
+#data-dialog p{font-size:13px;line-height:1.45;color:#444;margin:.4rem 0;}
+#data-dialog .dlg-row{display:flex;gap:8px;flex-wrap:wrap;margin:.6rem 0;}
+#data-dialog hr{border:none;border-top:1px solid #e8e8e4;margin:.9rem 0;}
+#data-dialog .dlg-warn{background:#fff7e6;border:1px solid #f0d9a8;border-radius:8px;padding:8px 10px;font-size:12px;color:#6b4e00;}
+#import-summary{background:#f5f5f0;border-radius:8px;padding:8px 10px;font-size:13px;}
+
+/* ---- sync dialog ---- */
+.pill-row,.sort-row{display:contents;}
+.lbl-short{display:none;}
+.sync-status{font-size:12px !important;color:#777 !important;}
+#sync-summary{background:#f5f5f0;border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.45;}
+.sync-paste{margin:.4rem 0;font-size:13px;}.sync-paste summary{cursor:pointer;color:#555;padding:6px 0;}
+.sync-paste textarea{width:100%;height:70px;font-family:ui-monospace,Menlo,monospace;font-size:12px;border:1px solid #e0e0da;border-radius:8px;padding:6px;margin:4px 0;}
+.sync-list{margin-top:6px;font-size:12px;color:#444;}
+.sync-list ul{margin:2px 0 0 18px;}
+#sync-file,#import-file{max-width:100%;font-size:14px;}
+
+/* ---- phone layout ---- */
+@media (max-width:760px){
+  html{-webkit-text-size-adjust:100%;}
+  body{-webkit-tap-highlight-color:transparent;}
+  .screen{padding-bottom:6rem;}
+  .header{padding:.6rem 1rem;padding-top:calc(.6rem + env(safe-area-inset-top));padding-left:max(1rem,env(safe-area-inset-left));padding-right:max(1rem,env(safe-area-inset-right));gap:6px;}
+  .header h1{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  .header button:not(.back-btn){padding:9px 11px !important;margin:0 !important;font-size:15px !important;}
+  .header .lbl{display:none;}
+  .lbl-long{display:none;}.lbl-short{display:inline;}
+  .back-btn{font-size:28px;padding:2px 8px 2px 0;}
+  .body{padding:.75rem 1rem;}
+  .status-banner{padding:6px 1rem;font-size:12px;}
+  .stat-row{grid-template-columns:repeat(3,1fr);gap:6px;}
+  .stat{padding:.5rem .65rem;}
+  .stat-val{font-size:20px;}
+  .stat-label{font-size:10px;}
+  .toolbar{gap:8px;}
+  .search-box{flex:1 1 100%;min-width:0;}
+  .search-box input{font-size:16px;padding:10px 12px 10px 34px;}
+  .pill-row{display:flex;gap:6px;flex:1 1 100%;overflow-x:auto;padding:2px 0 6px;margin:0 -1rem;padding-left:1rem;padding-right:1rem;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .pill-row::-webkit-scrollbar{display:none;}
+  .pill-row>*{flex:0 0 auto;}
+  .filter-pill,.sort-btn{padding:8px 14px;font-size:13px;}
+  .tb-spacer{display:none;}
+  .sort-row{display:flex;gap:6px;align-items:center;flex:1 1 100%;}
+    #goto-add-company{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom));z-index:30;border-radius:28px;padding:14px 20px !important;font-size:15px !important;box-shadow:0 6px 20px rgba(0,0,0,.28);}
+  #entry-list{grid-template-columns:1fr;}
+  #entry-list:has(.apps-table){overflow-x:auto;}
+  .apps-table{min-width:560px;}
+  .company-header{flex-direction:column;align-items:stretch;gap:8px;padding:.7rem 1rem;}
+  .company-header>div:first-child{flex-wrap:wrap;gap:2px 10px !important;}
+  .company-name{white-space:normal;font-size:15px;}
+  .company-meta{white-space:normal;overflow:visible;}
+  .company-badges{justify-content:flex-start;}
+  .app-row{flex-wrap:wrap;padding:.6rem 1rem;gap:6px 10px;}
+  .app-role{flex:1 1 100%;font-size:14px;}
+  .app-dates{flex-wrap:wrap;flex-shrink:1;gap:4px 10px;}
+  .btn-sm{padding:8px 12px;font-size:13px;}
+  .overdue-alert{padding:.75rem 1rem;}
+  .overdue-item{flex-wrap:wrap;gap:0 10px;}
+  .form-two-col,.form-three-col{grid-template-columns:1fr;gap:0;}
+  .form-group input,.form-group select,.form-group textarea,select,input[type=date],input[type=text],input[type=url],input[type=email],input[type=number],textarea{font-size:16px !important;}
+  button{min-height:42px;}
+  .btn-row button{flex:1 1 100%;}
+  .nav-tab{padding:.7rem 1rem;}
+  #new-evt-type{flex:1 1 100% !important;}
+  #new-evt-date{flex:1 1 140px !important;min-width:140px !important;}
+  #tab-app-overview div[style*="repeat(3,1fr)"]{grid-template-columns:1fr 1fr !important;}
+  .event-card{max-width:100%;}
+  .stats-grid{grid-template-columns:1fr 1fr;gap:.6rem;}
+  .stats-card{padding:.9rem;}
+  .stats-number{font-size:28px;}
+  .stats-card[style*="grid-column"],.stats-card:has(canvas){grid-column:1/-1 !important;}
+  #toast-container{left:12px;right:12px;bottom:calc(88px + env(safe-area-inset-bottom));align-items:center;}
+  .toast{max-width:100%;}
+  dialog#data-dialog{padding:1rem 1.1rem;max-height:calc(100dvh - 2rem);overflow:auto;}
+  #data-dialog .dlg-row button{flex:1 1 auto;}
+}
+</style>
+</head>
+<body>
+<div id="install-hint" style="display:none;background:#fff7e6;border-bottom:1px solid #f0d9a8;color:#6b4e00;font-size:13px;line-height:1.4;padding:10px 1rem;">
+  <strong>Install this first.</strong> In Safari tap <em>Share</em> then <em>Add to Home Screen</em>, and open Job Tracker from the new icon.
+  Use only that icon from then on: Safari and the Home Screen app keep separate data.
+  <button onclick="document.getElementById('install-hint').remove()" style="margin-left:6px;padding:4px 10px;min-height:0;font-size:12px;">Got it</button>
+</div>
+
+
+<!-- LIST SCREEN -->
+<div id="list-screen" class="screen active">
+  <div class="header">
+    <h1>&#128188; Job tracker</h1>
+    <button id="export-emails-btn" onclick="exportEmails()" style="display:none;font-size:13px;padding:5px 12px;margin-right:4px;" aria-label="Export emails"><i class="ti ti-mail-forward"></i> <span class="lbl">Export emails</span></button>
+    <button onclick="openDataDialog()" style="font-size:13px;padding:5px 12px;margin-right:4px;" aria-label="Sync and backup"><i class="ti ti-arrows-exchange"></i> <span class="lbl-long">Sync / backup</span><span class="lbl-short">Sync</span></button>
+    <button onclick="showScreen('stats-screen')" style="font-size:13px;padding:5px 12px;margin-right:4px;" aria-label="Stats"><i class="ti ti-chart-bar"></i> <span class="lbl-keep">Stats</span></button>
+    <button id="refresh-btn" onclick="loadData()" style="font-size:13px;padding:5px 12px;" aria-label="Refresh"><i class="ti ti-refresh"></i> <span class="lbl">Refresh</span></button>
+  </div>
+  <div id="connected-banner" class="status-banner" style="display:none;"></div>
+  <div class="body">
+    <div class="stat-row" id="stats"></div>
+    <div id="overdue-alert"></div>
+    <div class="toolbar">
+      <div class="search-box"><i class="ti ti-search"></i><input type="text" id="search-input" placeholder="Search company, role or contact..." oninput="renderList()"></div>
+      <div class="pill-row">
+      <button class="filter-pill active" data-f="all">All</button>
+      <button class="filter-pill" data-f="waiting">Awaiting</button>
+      <button class="filter-pill" data-f="replied">Replied</button>
+      <button class="filter-pill" data-f="interview">Interview</button>
+      <button class="filter-pill" data-f="offer">Offer</button>
+      <button class="filter-pill" data-f="rejection">Rejection</button>
+      <button class="filter-pill warning" data-f="overdue"><i class="ti ti-clock-exclamation"></i> Overdue</button>
+      <button class="filter-pill" data-f="priority"><i class="ti ti-star"></i> Priority</button>
+      <button class="filter-pill" data-f="linkedin"><i class="ti ti-brand-linkedin"></i> LinkedIn</button>
+      <button class="filter-pill" data-f="cvsent"><i class="ti ti-send"></i> CV sent</button>
+      <button class="filter-pill" data-f="applications"><i class="ti ti-table"></i> Applications</button>
+      <button class="filter-pill" data-f="archived"><i class="ti ti-archive"></i> Archived</button>
+      </div>
+      <span class="tb-spacer" style="flex:1"></span>
+      <div class="sort-row">
+      <span style="font-size:12px;color:#888;">Sort:</span>
+      <button class="sort-btn active" data-sort="alpha"><i class="ti ti-sort-az"></i> A-Z</button>
+      <button class="sort-btn" data-sort="cv"><i class="ti ti-send"></i> CV</button>
+      <button class="sort-btn" data-sort="reply"><i class="ti ti-message"></i> Reply</button>
+      </div>
+      <button class="btn-primary" id="goto-add-company" style="padding:6px 14px;font-size:13px;"><i class="ti ti-plus"></i> Add company</button>
+    </div>
+    <div id="entry-list"></div>
+  </div>
+</div>
+
+<!-- ADD/EDIT COMPANY SCREEN -->
+<div id="add-company-screen" class="screen">
+  <div class="header"><button class="back-btn" id="add-company-back">&#8592;</button><h1 id="add-company-title">Add company</h1></div>
+  <div class="body">
+    <div class="form-two-col">
+      <div class="form-group"><label>Company name *</label><input type="text" id="fc-company"></div>
+      <div class="form-group"><label>Contact person</label><input type="text" id="fc-contact"></div>
+      <div class="form-group"><label>Contact email</label><input type="email" id="fc-email" placeholder="e.g. jane@company.com"></div>
+      <div class="form-group"><label>Notes</label><input type="text" id="fc-notes"></div>
+    </div>
+    <div class="checkbox-row">
+      <label><input type="checkbox" id="fc-linkedin"> <i class="ti ti-brand-linkedin" style="font-size:16px;color:#0a66c2;"></i> Viewed me on LinkedIn</label>
+      <label><input type="checkbox" id="fc-archived"> <i class="ti ti-archive" style="font-size:16px;color:#888;"></i> Archived</label>
+    </div>
+    <div class="btn-row"><button id="save-company-btn" class="btn-primary">Save company</button></div>
+    <div id="add-company-error" style="color:#c0392b;font-size:13px;margin-top:8px;"></div>
+  </div>
+</div>
+
+<!-- ADD/EDIT APPLICATION SCREEN -->
+<div id="add-app-screen" class="screen">
+  <div class="header"><button class="back-btn" id="add-app-back">&#8592;</button><h1 id="add-app-title">Add application</h1></div>
+  <div class="body">
+    <div id="add-app-company-name" style="font-size:16px;font-weight:600;color:#888;margin-bottom:1rem;"></div>
+    <div class="form-two-col">
+      <div class="form-group"><label>Role / area *</label><input type="text" id="fa-role" placeholder="e.g. Head of Programme Management"></div>
+      <div class="form-group"><label>Job posting URL</label><input type="url" id="fa-joburl" placeholder="https://..."></div>
+      <div class="form-group"><label>CV sent date</label><input type="date" id="fa-cvdate"></div>
+      <div class="form-group"><label>Website registration date</label><input type="date" id="fa-webdate"></div>
+      <div class="form-group"><label>Next action</label><input type="text" id="fa-nextaction" placeholder="e.g. Chase in September"></div>
+      <div class="form-group"><label>Reminder date</label><input type="date" id="fa-reminder"></div>
+      <div class="form-group"><label>Follow-up after (days)</label><input type="number" id="fa-followup" value="14" min="1" max="365"></div>
+    </div>
+    <div class="checkbox-row">
+      <label><input type="checkbox" id="fa-priority"> <i class="ti ti-star" style="font-size:16px;color:#f5a623;"></i> Priority</label>
+    </div>
+    <div class="btn-row"><button id="save-app-btn" class="btn-primary">Save application</button></div>
+    <div id="add-app-error" style="color:#c0392b;font-size:13px;margin-top:8px;"></div>
+  </div>
+</div>
+
+<!-- APPLICATION DETAIL SCREEN -->
+<div id="app-detail-screen" class="screen">
+  <div class="header"><button class="back-btn" id="app-detail-back">&#8592;</button><h1 id="app-detail-title" style="font-size:16px;"></h1></div>
+  <div class="body">
+    <div class="nav-tabs">
+      <div class="nav-tab active" data-tab="app-overview">Overview</div>
+      <div class="nav-tab" data-tab="app-interview">Interview prep</div>
+    </div>
+    <div id="tab-app-overview" class="tab-content active"></div>
+    <div id="tab-app-interview" class="tab-content">
+      <div class="form-group"><label>Interview notes, questions &amp; prep</label><textarea id="interview-notes" style="height:300px;" placeholder="Add your interview prep notes here..."></textarea></div>
+      <button id="save-interview-btn" class="btn-primary" style="width:100%;">Save interview notes</button>
+    </div>
+  </div>
+</div>
+
+<!-- STATS SCREEN -->
+<div id="stats-screen" class="screen">
+  <div class="header"><button class="back-btn" id="stats-back">&#8592;</button><h1>Statistics</h1></div>
+  <div class="body" id="stats-body"></div>
+</div>
+
+<div id="toast-container"></div>
+
+<dialog id="data-dialog">
+  <h2><i class="ti ti-arrows-exchange"></i> Sync &amp; backup</h2>
+  <div id="sync-section">
+    <p id="sync-intro"></p>
+    <div class="dlg-row">
+      <button id="sync-send-btn" class="btn-primary" onclick="sendSync()"><i class="ti ti-send"></i> Send my data&hellip;</button>
+      <button id="sync-copy-btn" onclick="copySync()"><i class="ti ti-copy"></i> Copy as text</button>
+    </div>
+    <p><strong>Receive</strong> a file from your other device:</p>
+    <input type="file" id="sync-file" onchange="previewSync(this)">
+    <details class="sync-paste"><summary>Or paste the sync text instead</summary>
+      <textarea id="sync-paste" placeholder="Paste text copied with &quot;Copy as text&quot; on your other device" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+      <button onclick="previewPasted()">Preview pasted text</button>
+    </details>
+    <div id="sync-confirm" style="display:none;margin-top:.6rem;">
+      <div id="sync-summary"></div>
+      <div class="dlg-row">
+        <button class="btn-primary" id="sync-merge-btn" onclick="confirmSync()">Merge</button>
+        <button onclick="cancelSync()">Cancel</button>
+      </div>
+    </div>
+    <p id="sync-status" class="sync-status"></p>
+    <div id="sync-undo-row" class="dlg-row" style="display:none;">
+      <button onclick="undoMerge()"><i class="ti ti-arrow-back-up"></i> <span id="sync-undo-label">Undo last merge</span></button>
+    </div>
+    <p class="dlg-warn">Sync files contain names, email addresses and notes about other people. Send them only to your own devices.</p>
+  </div>
+  <div id="excel-section">
+    <hr>
+    <p><strong>Excel backup</strong></p>
+    <p>Your tracker is one Excel file stored on this computer. Use these buttons to keep a backup or share a copy.</p>
+    <div class="dlg-row">
+      <button id="share-btn" onclick="shareData()"><i class="ti ti-share"></i> Share&hellip;</button>
+      <button onclick="downloadData()"><i class="ti ti-download"></i> Download backup</button>
+    </div>
+    <p><strong>Restore from a backup file</strong></p>
+    <p>Choose a tracker .xlsx file. You will see a summary first, and nothing changes until you confirm. A copy of your current data is saved automatically before anything is replaced. (This <em>replaces</em> everything. To combine two devices, use Receive above.)</p>
+    <input type="file" id="import-file" accept=".xlsx" onchange="previewImport(this)">
+    <div id="import-confirm" style="display:none;margin-top:.6rem;">
+      <div id="import-summary"></div>
+      <div class="dlg-row">
+        <button class="btn-primary" onclick="confirmImport()">Replace my data</button>
+        <button onclick="cancelImport()">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <hr>
+  <div class="dlg-row" style="justify-content:flex-end;margin:0;"><button onclick="document.getElementById('data-dialog').close()">Close</button></div>
+</dialog>
+
+<script>
+const ET={cv_sent:"CV sent",web_registered:"Registered on website",acknowledgement:"Acknowledgement",interview_invite:"Interview invite",rejection:"Rejection",offer:"Job offer",other_reply:"Other reply",they_reached_out:"They reached out",note:"Note"};
+const DOT={cv_sent:"#1a6fb5",web_registered:"#0f7a55",acknowledgement:"#b57a00",interview_invite:"#5b3fbf",rejection:"#c0392b",offer:"#2d7a2d",other_reply:"#888",they_reached_out:"#888",note:"#888"};
+
+let companies=[], applications=[], events=[];
+let editCompanyId=null, editAppId=null, currentAppId=null;
+let filterStatus="all", sortMode="alpha";
+let pipelineChartInstance=null, monthlyChartInstance=null;
+
+function showToast(message,type="info"){
+  const container=document.getElementById("toast-container");
+  const t=document.createElement("div");
+  t.className=`toast toast-${type}`;
+  const icon=type==="success"?"check":type==="error"?"alert-circle":"info-circle";
+  t.innerHTML=`<i class="ti ti-${icon}"></i> ${esc(message)}`;
+  container.appendChild(t);
+  requestAnimationFrame(()=>t.classList.add("show"));
+  setTimeout(()=>{
+    t.classList.remove("show");
+    setTimeout(()=>t.remove(),250);
+  },3000);
+}
+
+async function exportEmails(){
+  const btn=document.getElementById("export-emails-btn");
+  const original=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML=`<i class="ti ti-loader-2 spin"></i> Exporting...`;
+  try{
+    const r=await api("/api/export-emails",{method:"POST"});
+    if(!r.ok){
+      let msg="Export failed.";
+      try{const j=await r.json();if(j.error)msg=j.error;}catch(e){}
+      showToast(msg,"error");
+      return;
+    }
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="job_emails_export.txt";
+    document.body.appendChild(a);a.click();a.remove();
+    URL.revokeObjectURL(url);
+    showToast("Email export downloaded — check your Downloads folder.","success");
+  }catch(e){
+    showToast("Could not reach the server to export emails.","error");
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML=original;
+  }
+}
+
+function api(path,opts={}){
+  opts.headers=Object.assign({"X-Job-Tracker":"1"},opts.headers||{});
+  opts.credentials="same-origin";
+  return fetch(path,opts);
+}
+async function errorText(r,fallback){
+  try{const j=await r.json();if(j&&j.error)return j.error;}catch(e){}
+  return fallback;
+}
+function safeUrl(u){
+  const s=String(u||"").trim();
+  return /^https?:\/\//i.test(s)?s:"";
+}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
+function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+function fmtDate(d){if(!d||d==="None"||d==="nan"||d==="")return"";const p=String(d).split("-");if(p.length<3)return d;return`${p[2].substring(0,2)}/${p[1]}/${p[0]}`;}
+function today(){return new Date().toISOString().split("T")[0];}
+function daysSince(d){if(!d||d==="None"||d==="")return null;return Math.floor((new Date()-new Date(d))/(1000*60*60*24));}
+function daysUntil(d){if(!d||d==="None"||d==="")return null;return Math.floor((new Date(d)-new Date())/(1000*60*60*24));}
+
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0,0);
+  if(id==="stats-screen")renderStats();
+}
+
+const LOCAL=window.JT_STATIC===true;   // phone copy: data lives in this browser, no server
+const LS_DATA="jt_data", LS_META="jt_meta", LS_UNDO="jt_undo";
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);return true;}catch(e){return false;}}
+function lsDel(k){try{localStorage.removeItem(k);}catch(e){}}
+function getMeta(){try{return JSON.parse(lsGet(LS_META)||"{}")||{};}catch(e){return {};}}
+function setMeta(patch){lsSet(LS_META,JSON.stringify(Object.assign(getMeta(),patch)));}
+function niceTime(iso){
+  if(!iso)return"never";
+  const d=new Date(iso);if(isNaN(d))return"never";
+  return d.toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+}
+
+function renderBanner(){
+  const b=document.getElementById("connected-banner");
+  b.style.display="flex";
+  const active=companies.filter(c=>!c.archived).length;
+  const totalApps=applications.filter(a=>!getCompany(a.companyId)?.archived).length;
+  const counts=`${active} companies, ${totalApps} applications`;
+  if(LOCAL){
+    const m=getMeta();
+    b.innerHTML=`<i class="ti ti-device-mobile"></i> Phone copy — ${counts} · last synced ${esc(niceTime(m.lastReceived||m.lastSent))}`;
+  }else b.innerHTML=`<i class="ti ti-check"></i> Connected — ${counts}`;
+}
+
+async function loadData(){
+  if(LOCAL){
+    const raw=lsGet(LS_DATA);
+    companies=[];applications=[];events=[];tombstones=[];
+    if(raw){
+      try{
+        const d=sanitizeSync(Object.assign({format:SYNC_FORMAT,version:1},JSON.parse(raw)));
+        companies=d.companies;applications=d.applications;events=d.events;tombstones=d.deleted;
+      }catch(e){
+        lsSet("jt_data_damaged",raw);
+        showToast("The saved data on this phone could not be read. A copy was kept; nothing was deleted.","error");
+      }
+    }
+    initBaseline();renderBanner();renderList();
+    return;
+  }
+  try{
+    const r=await api("/api/data");
+    if(!r.ok){showToast(await errorText(r,"Could not load data."),"error");return;}
+    const d=await r.json();
+    companies=d.companies||[];
+    applications=d.applications||[];
+    events=d.events||[];
+    tombstones=d.deleted||[];
+    initBaseline();
+    renderBanner();
+    renderList();
+  }catch(e){showToast("Could not load data.","error");}
+}
+
+// Called after every user edit: notes what changed (for syncing), then stores it.
+async function saveData(){
+  stampChanges();
+  return persist();
+}
+// Stores the current data exactly as it is (used directly after a merge, which must keep its timestamps).
+async function persist(){
+  const payload={companies,applications,events,deleted:tombstones};
+  if(LOCAL){
+    if(!lsSet(LS_DATA,JSON.stringify(payload)))showToast("Could not save on this phone (storage is full or blocked).","error");
+    renderBanner();
+    return;
+  }
+  try{
+    const r=await api("/api/data",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    if(!r.ok)showToast(await errorText(r,"Save failed."),"error");
+  }catch(e){showToast("Save failed.","error");}
+}
+
+function getCompany(id){return companies.find(c=>c.id===id);}
+function getAppsForCompany(cid){return applications.filter(a=>a.companyId===cid);}
+function getEventsForApp(aid){return events.filter(e=>e.appId===aid).sort((a,b)=>(a.date||"").localeCompare(b.date||""));}
+
+function deriveAppStatus(app){
+  const t=getEventsForApp(app.id).map(e=>e.type);
+  if(t.includes("offer"))return"offer";
+  if(t.includes("rejection"))return"rejection";
+  if(t.includes("interview_invite"))return"interview";
+  if(t.some(x=>["acknowledgement","other_reply"].includes(x)))return"replied";
+  return"waiting";
+}
+
+function deriveCompanyStatus(cid){
+  const apps=getAppsForCompany(cid);
+  if(!apps.length)return"waiting";
+  const statuses=apps.map(a=>deriveAppStatus(a));
+  if(statuses.includes("offer"))return"offer";
+  if(statuses.includes("interview"))return"interview";
+  if(statuses.includes("replied"))return"replied";
+  if(statuses.includes("rejection")&&statuses.every(s=>s==="rejection"))return"rejection";
+  return"waiting";
+}
+
+function getAppCvDate(app){
+  if(app.cvSentDate&&app.cvSentDate!=="None")return app.cvSentDate;
+  if(app.webRegDate&&app.webRegDate!=="None")return app.webRegDate;
+  const ev=getEventsForApp(app.id).find(e=>e.type==="cv_sent")||getEventsForApp(app.id).find(e=>e.type==="web_registered");
+  return ev?ev.date:"";
+}
+
+function getAppReplyDate(app){
+  const r=getEventsForApp(app.id).filter(e=>["acknowledgement","interview_invite","rejection","offer","other_reply"].includes(e.type));
+  return r.length?r.sort((a,b)=>b.date.localeCompare(a.date))[0].date:"";
+}
+
+function isAppOverdue(app){
+  const status=deriveAppStatus(app);
+  if(["offer","rejection","interview_invite"].includes(status))return false;
+  const cvDate=getAppCvDate(app);
+  if(!cvDate||cvDate==="None"||cvDate==="")return false;
+  const days=daysSince(cvDate);
+  return days!==null&&days>(app.followUpDays||14)&&!getAppReplyDate(app);
+}
+
+function isReminderDue(app){
+  if(!app.reminderDate||app.reminderDate==="None"||app.reminderDate==="")return false;
+  const t=today(), r=app.reminderDate;
+  if(r<t)return false;
+  const soon=new Date();soon.setDate(soon.getDate()+3);
+  return r<=soon.toISOString().split("T")[0];
+}
+function isReminderOverdue(app){
+  if(!app.reminderDate||app.reminderDate==="None"||app.reminderDate==="")return false;
+  return app.reminderDate<today();
+}
+
+function companyCvDate(cid){
+  const dates=getAppsForCompany(cid).map(a=>getAppCvDate(a)).filter(d=>d&&d!=="None"&&d!=="");
+  return dates.length?dates.sort().reverse()[0]:"";
+}
+function companyReplyDate(cid){
+  const dates=getAppsForCompany(cid).map(a=>getAppReplyDate(a)).filter(d=>d&&d!=="None"&&d!=="");
+  return dates.length?dates.sort().reverse()[0]:"";
+}
+
+function sortCompanies(list){
+  if(sortMode==="alpha")return[...list].sort((a,b)=>a.company.localeCompare(b.company));
+  if(sortMode==="cv")return[...list].sort((a,b)=>{const da=companyCvDate(a.id),db=companyCvDate(b.id);if(!da&&!db)return 0;if(!da)return 1;if(!db)return -1;return db.localeCompare(da);});
+  if(sortMode==="reply")return[...list].sort((a,b)=>{const da=companyReplyDate(a.id),db=companyReplyDate(b.id);if(!da&&!db)return 0;if(!da)return 1;if(!db)return -1;return db.localeCompare(da);});
+  return list;
+}
+
+function renderStatBar(){
+  const active=companies.filter(c=>!c.archived);
+  const allApps=applications.filter(a=>!getCompany(a.companyId)?.archived);
+  const waiting=allApps.filter(a=>deriveAppStatus(a)==="waiting").length;
+  const replied=allApps.filter(a=>deriveAppStatus(a)==="replied").length;
+  const interview=allApps.filter(a=>deriveAppStatus(a)==="interview").length;
+  const offer=allApps.filter(a=>deriveAppStatus(a)==="offer").length;
+  const overdue=allApps.filter(a=>isAppOverdue(a)).length;
+
+  const defs=[
+    {key:"all",label:"Companies",val:active.length,color:"#1a1a1a"},
+    {key:"waiting",label:"Awaiting",val:waiting,color:"#1a6fb5"},
+    {key:"replied",label:"Replied",val:replied,color:"#b57a00"},
+    {key:"interview",label:"Interview",val:interview,color:"#5b3fbf"},
+    {key:"offer",label:"Offer",val:offer,color:"#2d7a2d"},
+    {key:"overdue",label:"Overdue",val:overdue,color:"#e67e22"},
+  ];
+  document.getElementById("stats").innerHTML=defs.map(s=>`
+    <div class="stat ${filterStatus===s.key?"active-filter":""}" onclick="setFilter('${s.key}')">
+      <div class="stat-label">${s.label}</div>
+      <div class="stat-val" style="${filterStatus===s.key?"":"color:"+s.color}">${s.val}</div>
+    </div>`).join("");
+
+  const overdueApps=allApps.filter(a=>isAppOverdue(a));
+  const alertEl=document.getElementById("overdue-alert");
+  if(overdueApps.length&&filterStatus!=="archived"){
+    alertEl.innerHTML=`<div class="overdue-alert"><h3><i class="ti ti-clock-exclamation"></i> ${overdueApps.length} follow-up${overdueApps.length>1?"s":""} overdue</h3>${overdueApps.map(a=>{const days=daysSince(getAppCvDate(a));return`<div class="overdue-item"><span>${esc(a.companyName)} — ${esc(a.role)}</span><span style="color:#e67e22;font-size:12px;">${days} days since CV sent</span></div>`;}).join("")}</div>`;
+  } else {
+    alertEl.innerHTML="";
+  }
+}
+
+function setFilter(f){
+  filterStatus=f;
+  document.querySelectorAll(".filter-pill").forEach(b=>b.classList.toggle("active",b.dataset.f===f));
+  renderList();
+}
+
+function matchesFilter(company){
+  const apps=getAppsForCompany(company.id);
+  if(filterStatus==="archived")return company.archived;
+  if(company.archived)return false;
+  if(filterStatus==="all")return true;
+  if(filterStatus==="priority")return apps.some(a=>a.priority);
+  if(filterStatus==="linkedin")return company.linkedinViewed;
+  if(filterStatus==="cvsent")return apps.some(a=>getAppCvDate(a));
+  if(filterStatus==="applications")return apps.length>0;
+  if(filterStatus==="overdue")return apps.some(a=>isAppOverdue(a));
+  return apps.some(a=>deriveAppStatus(a)===filterStatus);
+}
+
+function renderList(){
+  renderStatBar();
+  document.querySelectorAll(".sort-btn").forEach(b=>b.classList.toggle("active",b.dataset.sort===sortMode));
+  const search=(document.getElementById("search-input").value||"").toLowerCase();
+  let filtered=companies.filter(c=>matchesFilter(c));
+  if(search){filtered=filtered.filter(c=>{
+    const apps=getAppsForCompany(c.id);
+    return(c.company||"").toLowerCase().includes(search)||
+      (c.contact||"").toLowerCase().includes(search)||
+      apps.some(a=>(a.role||"").toLowerCase().includes(search));
+  });}
+  const sorted=sortCompanies(filtered);
+  const el=document.getElementById("entry-list");
+  if(!sorted.length){el.style.display="grid";el.innerHTML=`<div class="empty" style="grid-column:1/-1;"><div style="font-size:40px;margin-bottom:.5rem">&#127970;</div>${companies.length?"No entries match.":"No companies yet."}</div>`;return;}
+
+  if(filterStatus==="applications"){renderApplicationsTable(sorted,el);return;}
+
+  el.style.display="grid";
+  el.innerHTML=sorted.map(c=>{
+    const apps=getAppsForCompany(c.id);
+    const hasPriority=apps.some(a=>a.priority);
+    const status=deriveCompanyStatus(c.id);
+    return`<div class="company-card ${hasPriority?"has-priority":""}" >
+      <div class="company-header">
+        <div style="display:flex;align-items:baseline;gap:10px;min-width:0;flex:1;">
+          <div class="company-name">${esc(c.company)}</div>
+          <div class="company-meta">${[c.contact,c.email].filter(Boolean).map(esc).join(" · ")}</div>
+        </div>
+        <div class="company-badges">
+          ${c.linkedinViewed?`<span class="li-pill"><i class="ti ti-brand-linkedin"></i> LinkedIn</span>`:""}
+          ${c.archived?`<span class="archived-pill">Archived</span>`:""}
+          <span class="badge b-${status}">${status==="waiting"?"Awaiting":status.charAt(0).toUpperCase()+status.slice(1)}</span>
+          <button class="btn-sm btn-sm-primary" onclick="event.stopPropagation();openAddApp('${c.id}')">+ Application</button>
+          <button class="btn-sm" onclick="event.stopPropagation();startEditCompany('${c.id}')">&#9998; Edit</button>
+        </div>
+      </div>
+      <div class="app-list">
+        ${apps.length?apps.map(a=>{
+          const aStatus=deriveAppStatus(a);
+          const cvDate=getAppCvDate(a);
+          const replyDate=getAppReplyDate(a);
+          const overdue=isAppOverdue(a);
+          const remDue=isReminderDue(a);
+          const remOver=isReminderOverdue(a);
+          return`<div class="app-row ${overdue?"overdue":""}" onclick="openAppDetail('${a.id}')">
+            <div class="app-role">${esc(a.role)||"(no role specified)"}${a.priority?` <span class="priority-badge">&#9733; Priority</span>`:""}</div>
+            <div class="app-dates">
+              ${cvDate?`<span><i class="ti ti-send" style="font-size:11px;"></i> ${fmtDate(cvDate)}</span>`:""}
+              ${replyDate?`<span><i class="ti ti-message" style="font-size:11px;"></i> ${fmtDate(replyDate)}</span>`:""}
+              ${overdue?`<span class="overdue-pill">Follow up</span>`:""}
+              ${a.reminderDate&&a.reminderDate!=="None"&&a.reminderDate!==""?`<span class="reminder-pill ${remOver?"overdue-r":remDue?"due":""}"><i class="ti ti-bell" style="font-size:11px;"></i> ${fmtDate(a.reminderDate)}</span>`:""}
+              ${a.nextAction?`<span style="color:#5b3fbf;font-size:11px;"><i class="ti ti-arrow-right" style="font-size:11px;"></i> ${esc(a.nextAction)}</span>`:""}
+            </div>
+            <span class="badge b-${aStatus}">${aStatus==="waiting"?"Awaiting":aStatus.charAt(0).toUpperCase()+aStatus.slice(1)}</span>
+          </div>`;
+        }).join(""):`<div class="app-row" style="color:#aaa;font-style:italic;">No applications yet</div>`}
+
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderApplicationsTable(companyList,el){
+  el.style.display="block";
+  const rows=[];
+  companyList.forEach(c=>{getAppsForCompany(c.id).forEach(a=>rows.push({c,a}));});
+  if(!rows.length){el.innerHTML=`<div class="empty"><div style="font-size:40px;margin-bottom:.5rem">&#128203;</div>No applications yet.</div>`;return;}
+  el.innerHTML=`<table class="apps-table">
+    <thead><tr><th>Company</th><th>Role(s) applied for</th><th>CV sent</th><th>Last reply</th><th>Status / next action</th></tr></thead>
+    <tbody>
+    ${rows.map(({c,a})=>{
+      const status=deriveAppStatus(a);
+      const cvDate=getAppCvDate(a);
+      const replyDate=getAppReplyDate(a);
+      const overdue=isAppOverdue(a);
+      const statusLabel=status==="waiting"?"Awaiting":status.charAt(0).toUpperCase()+status.slice(1);
+      return`<tr class="${overdue?"overdue-row":""}" onclick="openAppDetail('${a.id}')">
+        <td>${esc(c.company)}</td>
+        <td class="col-role">${esc(a.role)||"(no role specified)"}${a.priority?` <span class="priority-badge">&#9733;</span>`:""}</td>
+        <td class="${cvDate?"":"col-muted"}">${cvDate?fmtDate(cvDate):"—"}</td>
+        <td class="${replyDate?"":"col-muted"}">${replyDate?fmtDate(replyDate):"—"}</td>
+        <td><span class="badge b-${status}">${statusLabel}</span>${a.nextAction&&a.nextAction!=="None"?` <span style="color:#5b3fbf;font-size:12px;">&#8594; ${esc(a.nextAction)}</span>`:""}</td>
+      </tr>`;
+    }).join("")}
+    </tbody>
+  </table>`;
+}
+
+function openAppDetail(appId){
+  currentAppId=appId;
+  const a=applications.find(x=>x.id===appId);if(!a)return;
+  const c=getCompany(a.companyId);
+  const status=deriveAppStatus(appId);
+  const evs=getEventsForApp(appId);
+  document.getElementById("app-detail-title").textContent=`${c?c.company:""} — ${a.role}`;
+  document.getElementById("interview-notes").value=a.interviewNotes||"";
+  document.querySelectorAll(".nav-tab").forEach(t=>t.classList.toggle("active",t.dataset.tab==="app-overview"));
+  document.querySelectorAll(".tab-content").forEach(t=>t.classList.toggle("active",t.id==="tab-app-overview"));
+
+  document.getElementById("tab-app-overview").innerHTML=`
+    <div class="app-detail-header">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge b-${status}" style="font-size:12px;padding:5px 12px;">${status==="waiting"?"Awaiting reply":status.charAt(0).toUpperCase()+status.slice(1)}</span>
+          <button class="star-btn ${a.priority?"starred":""}" onclick="togglePriority('${appId}')" title="Toggle priority">&#9733;</button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="startEditApp('${appId}')" class="btn-sm">&#9998; Edit</button>
+          <button onclick="deleteApp('${appId}')" class="btn-sm btn-danger" style="font-size:11px;padding:3px 8px;">&#128465; Delete</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;font-size:13px;">
+        ${c?`<div><div class="detail-field-label">Company</div><div class="detail-field-val">${esc(c.company)}</div></div>`:""}
+        ${c?.contact?`<div><div class="detail-field-label">Contact</div><div class="detail-field-val">${esc(c.contact)}</div></div>`:""}
+        ${c?.email?`<div><div class="detail-field-label">Email</div><div class="detail-field-val"><a href="mailto:${esc(c.email)}" style="color:#1a6fb5;">${esc(c.email)}</a></div></div>`:""}
+        ${getAppCvDate(a)?`<div><div class="detail-field-label">CV sent</div><div class="detail-field-val">${fmtDate(getAppCvDate(a))}</div></div>`:""}
+        ${getAppReplyDate(a)?`<div><div class="detail-field-label">Last reply</div><div class="detail-field-val">${fmtDate(getAppReplyDate(a))}</div></div>`:""}
+        ${safeUrl(a.jobUrl)?`<div><div class="detail-field-label">Job posting</div><div class="detail-field-val"><a href="${esc(safeUrl(a.jobUrl))}" target="_blank" rel="noopener noreferrer" style="color:#1a6fb5;">View role &#8599;</a></div></div>`:""}
+        ${a.nextAction&&a.nextAction!=="None"?`<div><div class="detail-field-label">Next action</div><div class="detail-field-val" style="color:#5b3fbf;font-weight:500;">${esc(a.nextAction)}</div></div>`:""}
+        ${a.reminderDate&&a.reminderDate!=="None"&&a.reminderDate!==""?`<div><div class="detail-field-label">Reminder</div><div class="detail-field-val">${fmtDate(a.reminderDate)}${isReminderOverdue(a)?" <span style='color:#c0392b;font-size:11px;'>Overdue</span>":isReminderDue(a)?" <span style='color:#e67e22;font-size:11px;'>Due soon</span>":""}</div></div>`:""}
+      </div>
+    </div>
+    <div class="section-label">Timeline</div>
+    ${evs.length?`<div class="event-list">`+evs.map(e=>`
+      <div class="event-card">
+        <div class="event-card-body">
+          <div class="event-header"><span class="event-type">${ET[e.type]||e.type}</span><span class="event-date">${fmtDate(e.date)}</span></div>
+          ${e.notes?`<div class="event-notes">${esc(e.notes)}</div>`:""}
+        </div>
+        <button class="event-delete" onclick="event.stopPropagation();deleteEvent('${e.id}','${appId}')" title="Delete">&#215;</button>
+      </div>`).join("")+`</div>`:"<p style='font-size:13px;color:#999;margin-bottom:1rem;'>No events yet.</p>"}
+    <div class="section-label">Log event</div>
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+      <select id="new-evt-type" style="flex:2;min-width:140px;padding:6px 8px;font-size:13px;border:1px solid #e0e0da;border-radius:8px;">
+        <option value="cv_sent">CV sent</option>
+        <option value="web_registered">Registered on website</option>
+        <option value="acknowledgement">Acknowledgement</option>
+        <option value="interview_invite">Interview invite</option>
+        <option value="rejection">Rejection</option>
+        <option value="offer">Job offer</option>
+        <option value="other_reply">Other reply</option>
+        <option value="note">Note</option>
+      </select>
+      <input type="date" id="new-evt-date" value="${today()}" style="flex:1;min-width:120px;padding:6px 8px;font-size:13px;border:1px solid #e0e0da;border-radius:8px;">
+      <button onclick="addEvent('${appId}')" class="btn-primary" style="flex:1;min-width:120px;padding:6px 12px;font-size:13px;">+ Add</button>
+    </div>
+    <div class="form-group"><textarea id="new-evt-notes" placeholder="Notes (optional)" style="height:60px;font-size:13px;"></textarea></div>
+    <div class="btn-row" style="margin-top:1rem;">
+      <button class="btn-warning" onclick="archiveCompanyToggle('${a.companyId}')">${c?.archived?"&#128065; Unarchive company":"&#128193; Archive company"}</button>
+      <button class="btn-danger" onclick="deleteCompany('${a.companyId}')">&#128465; Delete company</button>
+    </div>`;
+
+  showScreen("app-detail-screen");
+}
+
+function addEvent(appId){
+  const date=document.getElementById("new-evt-date").value;if(!date)return;
+  const a=applications.find(x=>x.id===appId);
+  const c=a?getCompany(a.companyId):null;
+  const type=document.getElementById("new-evt-type").value;
+  events.push({id:"ev"+uid(),appId,companyId:a?a.companyId:"",companyName:c?c.company:"",role:a?a.role:"",type,date,notes:(document.getElementById("new-evt-notes").value||"").trim()});
+  if(a){
+    if(type==="cv_sent"&&(!a.cvSentDate||a.cvSentDate==="None"||a.cvSentDate===""))a.cvSentDate=date;
+    if(type==="web_registered"&&(!a.webRegDate||a.webRegDate==="None"||a.webRegDate===""))a.webRegDate=date;
+  }
+  saveData();openAppDetail(appId);
+}
+
+function deleteEvent(eid,aid){
+  if(!confirm("Delete this event?"))return;
+  events=events.filter(e=>e.id!==eid);
+  saveData();openAppDetail(aid);
+}
+
+function togglePriority(appId){
+  const idx=applications.findIndex(x=>x.id===appId);
+  if(idx>-1){applications[idx].priority=!applications[idx].priority;saveData();openAppDetail(appId);}
+}
+
+function archiveCompanyToggle(cid){
+  const idx=companies.findIndex(x=>x.id===cid);
+  if(idx>-1){companies[idx].archived=!companies[idx].archived;saveData();showScreen("list-screen");renderList();}
+}
+
+function deleteApp(appId){
+  if(!confirm("Delete this application?"))return;
+  applications=applications.filter(a=>a.id!==appId);
+  events=events.filter(e=>e.appId!==appId);
+  saveData();showScreen("list-screen");renderList();
+}
+
+function deleteCompany(cid){
+  if(!confirm("Delete this company and ALL its applications and events?"))return;
+  const appIds=applications.filter(a=>a.companyId===cid).map(a=>a.id);
+  companies=companies.filter(c=>c.id!==cid);
+  applications=applications.filter(a=>a.companyId!==cid);
+  events=events.filter(e=>!appIds.includes(e.appId));
+  saveData();showScreen("list-screen");renderList();
+}
+
+// ── Company add/edit ──
+function openAddCompany(){
+  editCompanyId=null;
+  document.getElementById("add-company-title").textContent="Add company";
+  document.getElementById("fc-company").value="";
+  document.getElementById("fc-contact").value="";
+  document.getElementById("fc-email").value="";
+  document.getElementById("fc-notes").value="";
+  document.getElementById("fc-linkedin").checked=false;
+  document.getElementById("fc-archived").checked=false;
+  document.getElementById("add-company-error").textContent="";
+  document.getElementById("save-company-btn").textContent="Save company";
+  showScreen("add-company-screen");
+}
+
+function startEditCompany(cid){
+  const c=companies.find(x=>x.id===cid);if(!c)return;
+  editCompanyId=cid;
+  document.getElementById("add-company-title").textContent="Edit company";
+  document.getElementById("fc-company").value=c.company;
+  document.getElementById("fc-contact").value=c.contact||"";
+  document.getElementById("fc-email").value=c.email||"";
+  document.getElementById("fc-notes").value=c.notes||"";
+  document.getElementById("fc-linkedin").checked=c.linkedinViewed||false;
+  document.getElementById("fc-archived").checked=c.archived||false;
+  document.getElementById("add-company-error").textContent="";
+  document.getElementById("save-company-btn").textContent="Update company";
+  showScreen("add-company-screen");
+}
+
+function saveCompany(){
+  const company=document.getElementById("fc-company").value.trim();
+  if(!company){document.getElementById("add-company-error").textContent="Company name is required.";return;}
+  if(editCompanyId){
+    const idx=companies.findIndex(c=>c.id===editCompanyId);
+    companies[idx]={...companies[idx],company,contact:document.getElementById("fc-contact").value.trim(),email:document.getElementById("fc-email").value.trim(),notes:document.getElementById("fc-notes").value.trim(),linkedinViewed:document.getElementById("fc-linkedin").checked,archived:document.getElementById("fc-archived").checked};
+    // Update company name in applications and events
+    applications.filter(a=>a.companyId===editCompanyId).forEach(a=>a.companyName=company);
+    events.filter(e=>e.companyId===editCompanyId).forEach(e=>e.companyName=company);
+  } else {
+    const newId="c"+uid();
+    companies.push({id:newId,company,contact:document.getElementById("fc-contact").value.trim(),email:document.getElementById("fc-email").value.trim(),notes:document.getElementById("fc-notes").value.trim(),linkedinViewed:document.getElementById("fc-linkedin").checked,archived:document.getElementById("fc-archived").checked});
+  }
+  saveData();showScreen("list-screen");renderList();
+}
+
+// ── Application add/edit ──
+function openAddApp(cid){
+  editAppId=null;
+  const c=getCompany(cid);
+  document.getElementById("add-app-title").textContent="Add application";
+  document.getElementById("add-app-company-name").textContent=c?c.company:"";
+  document.getElementById("add-app-company-name").dataset.cid=cid;
+  document.getElementById("fa-role").value="";
+  document.getElementById("fa-joburl").value="";
+  document.getElementById("fa-cvdate").value="";
+  document.getElementById("fa-webdate").value="";
+  document.getElementById("fa-nextaction").value="";
+  document.getElementById("fa-reminder").value="";
+  document.getElementById("fa-followup").value=14;
+  document.getElementById("fa-priority").checked=false;
+  document.getElementById("add-app-error").textContent="";
+  document.getElementById("save-app-btn").textContent="Save application";
+  showScreen("add-app-screen");
+}
+
+function startEditApp(appId){
+  const a=applications.find(x=>x.id===appId);if(!a)return;
+  const c=getCompany(a.companyId);
+  editAppId=appId;
+  document.getElementById("add-app-title").textContent="Edit application";
+  document.getElementById("add-app-company-name").textContent=c?c.company:"";
+  document.getElementById("add-app-company-name").dataset.cid=a.companyId;
+  document.getElementById("fa-role").value=a.role||"";
+  document.getElementById("fa-joburl").value=a.jobUrl||"";
+  document.getElementById("fa-cvdate").value=a.cvSentDate||"";
+  document.getElementById("fa-webdate").value=a.webRegDate||"";
+  document.getElementById("fa-nextaction").value=a.nextAction||"";
+  document.getElementById("fa-reminder").value=a.reminderDate||"";
+  document.getElementById("fa-followup").value=a.followUpDays||14;
+  document.getElementById("fa-priority").checked=a.priority||false;
+  document.getElementById("add-app-error").textContent="";
+  document.getElementById("save-app-btn").textContent="Update application";
+  showScreen("add-app-screen");
+}
+
+function saveApp(){
+  const role=document.getElementById("fa-role").value.trim();
+  if(!role){document.getElementById("add-app-error").textContent="Role is required.";return;}
+  const cid=document.getElementById("add-app-company-name").dataset.cid;
+  const c=getCompany(cid);
+  if(editAppId){
+    const idx=applications.findIndex(a=>a.id===editAppId);
+    applications[idx]={...applications[idx],role,jobUrl:document.getElementById("fa-joburl").value.trim(),cvSentDate:document.getElementById("fa-cvdate").value,webRegDate:document.getElementById("fa-webdate").value,nextAction:document.getElementById("fa-nextaction").value.trim(),reminderDate:document.getElementById("fa-reminder").value,followUpDays:parseInt(document.getElementById("fa-followup").value)||14,priority:document.getElementById("fa-priority").checked};
+    events.filter(e=>e.appId===editAppId).forEach(e=>e.role=role);
+  } else {
+    const newId="app_"+uid();
+    applications.push({id:newId,companyId:cid,companyName:c?c.company:"",role,jobUrl:document.getElementById("fa-joburl").value.trim(),cvSentDate:document.getElementById("fa-cvdate").value,webRegDate:document.getElementById("fa-webdate").value,nextAction:document.getElementById("fa-nextaction").value.trim(),reminderDate:document.getElementById("fa-reminder").value,followUpDays:parseInt(document.getElementById("fa-followup").value)||14,priority:document.getElementById("fa-priority").checked,status:"",interviewNotes:""});
+  }
+  saveData();showScreen("list-screen");renderList();
+}
+
+function renderStats(){
+  const allApps=applications.filter(a=>!getCompany(a.companyId)?.archived);
+  const total=allApps.length;
+  const withCv=allApps.filter(a=>getAppCvDate(a)).length;
+  const replied=allApps.filter(a=>getAppReplyDate(a)).length;
+  const interviews=allApps.filter(a=>deriveAppStatus(a)==="interview").length;
+  const offers=allApps.filter(a=>deriveAppStatus(a)==="offer").length;
+  const linkedin=companies.filter(c=>c.linkedinViewed&&!c.archived).length;
+  const overdue=allApps.filter(a=>isAppOverdue(a)).length;
+  const responseRate=withCv>0?Math.round((replied/withCv)*100):0;
+  const interviewRate=withCv>0?Math.round((interviews/withCv)*100):0;
+
+  const statusCounts={waiting:0,replied:0,interview:0,offer:0,rejection:0};
+  allApps.forEach(a=>{const s=deriveAppStatus(a);if(statusCounts[s]!==undefined)statusCounts[s]++;});
+
+  const monthlyApps=()=>{
+    const counts={};
+    allApps.forEach(a=>{const d=getAppCvDate(a);if(d&&d!=="None"&&d!==""){const m=d.substring(0,7);counts[m]=(counts[m]||0)+1;}});
+    return Object.entries(counts).sort((a,b)=>a[0].localeCompare(b[0])).slice(-6);
+  };
+
+  document.getElementById("stats-body").innerHTML=`
+    <div class="stats-grid">
+      <div class="stats-card"><h3>Applications</h3><div class="stats-number">${withCv}</div><div class="stats-sub">CVs sent across ${total} applications</div></div>
+      <div class="stats-card"><h3>Response rate</h3><div class="stats-number">${responseRate}%</div><div class="stats-sub">${replied} replies from ${withCv} applications</div></div>
+      <div class="stats-card"><h3>Interview rate</h3><div class="stats-number">${interviewRate}%</div><div class="stats-sub">${interviews} interviews from ${withCv} applications</div></div>
+      <div class="stats-card"><h3>Offers</h3><div class="stats-number" style="color:#2d7a2d">${offers}</div><div class="stats-sub">${offers>0?Math.round((offers/withCv)*100)+"% offer rate":"No offers yet"}</div></div>
+      <div class="stats-card"><h3>LinkedIn views</h3><div class="stats-number" style="color:#1a6fb5">${linkedin}</div><div class="stats-sub">${companies.filter(c=>!c.archived).length>0?Math.round((linkedin/companies.filter(c=>!c.archived).length)*100)+"% of companies":"—"}</div></div>
+      <div class="stats-card"><h3>Overdue follow-ups</h3><div class="stats-number" style="color:${overdue>0?"#e67e22":"#2d7a2d"}">${overdue}</div><div class="stats-sub">${overdue>0?"Need chasing":"All up to date"}</div></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stats-card" style="grid-column:span 2"><h3>Pipeline breakdown</h3>
+        <div style="height:220px;"><canvas id="pipeline-chart"></canvas></div>
+      </div>
+      <div class="stats-card"><h3>Applications by month</h3>
+        ${monthlyApps().length?`<div style="height:220px;"><canvas id="monthly-chart"></canvas></div>`:"<p style='font-size:13px;color:#999'>No data yet</p>"}
+      </div>
+    </div>`;
+
+  if(pipelineChartInstance){pipelineChartInstance.destroy();pipelineChartInstance=null;}
+  if(monthlyChartInstance){monthlyChartInstance.destroy();monthlyChartInstance=null;}
+
+  const statusColours={waiting:"#1a6fb5",replied:"#b57a00",interview:"#5b3fbf",offer:"#2d7a2d",rejection:"#c0392b"};
+  const statusLabels={waiting:"Awaiting reply",replied:"Replied",interview:"Interview",offer:"Offer received",rejection:"Rejected"};
+  if(typeof Chart==="undefined"){
+    document.querySelectorAll("#stats-body canvas").forEach(c=>{c.parentElement.innerHTML="<p style='font-size:13px;color:#999'>Charts need an internet connection the first time they load.</p>";});
+    return;
+  }
+  pipelineChartInstance=new Chart(document.getElementById("pipeline-chart"),{
+    type:"bar",
+    data:{
+      labels:Object.keys(statusCounts).map(s=>statusLabels[s]||s),
+      datasets:[{data:Object.values(statusCounts),backgroundColor:Object.keys(statusCounts).map(s=>statusColours[s]||"#888"),borderRadius:4,maxBarThickness:28}]
+    },
+    options:{
+      indexAxis:"y",
+      maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.x} application${c.parsed.x===1?"":"s"}`}}},
+      scales:{x:{beginAtZero:true,ticks:{precision:0}}}
+    }
+  });
+
+  const monthly=monthlyApps();
+  if(monthly.length){
+    monthlyChartInstance=new Chart(document.getElementById("monthly-chart"),{
+      type:"bar",
+      data:{
+        labels:monthly.map(([m])=>new Date(m+"-01").toLocaleDateString("en-GB",{month:"short",year:"2-digit"})),
+        datasets:[{data:monthly.map(([,n])=>n),backgroundColor:"#1a1a1a",borderRadius:4,maxBarThickness:36}]
+      },
+      options:{
+        maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y} application${c.parsed.y===1?"":"s"}`}}},
+        scales:{y:{beginAtZero:true,ticks:{precision:0}}}
+      }
+    });
+  }
+}
+
+// ── Event listeners ──
+document.getElementById("goto-add-company").addEventListener("click",openAddCompany);
+document.getElementById("add-company-back").addEventListener("click",()=>{showScreen("list-screen");renderList();});
+document.getElementById("add-app-back").addEventListener("click",()=>{showScreen("list-screen");renderList();});
+document.getElementById("app-detail-back").addEventListener("click",()=>{showScreen("list-screen");renderList();});
+document.getElementById("stats-back").addEventListener("click",()=>{showScreen("list-screen");renderList();});
+document.getElementById("save-company-btn").addEventListener("click",saveCompany);
+document.getElementById("save-app-btn").addEventListener("click",saveApp);
+document.querySelectorAll(".sort-btn").forEach(b=>b.addEventListener("click",()=>{sortMode=b.dataset.sort;renderList();}));
+document.querySelectorAll(".filter-pill").forEach(b=>b.addEventListener("click",()=>setFilter(b.dataset.f)));
+document.querySelectorAll(".nav-tab").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    document.querySelectorAll(".nav-tab").forEach(t=>t.classList.toggle("active",t===tab));
+    document.querySelectorAll(".tab-content").forEach(t=>t.classList.toggle("active",t.id==="tab-"+tab.dataset.tab));
+  });
+});
+document.getElementById("save-interview-btn").addEventListener("click",()=>{
+  if(!currentAppId)return;
+  const idx=applications.findIndex(x=>x.id===currentAppId);
+  if(idx>-1){applications[idx].interviewNotes=document.getElementById("interview-notes").value;saveData();showToast("Interview notes saved!","success");}
+});
+
+
+/*SYNC-BEGIN*/
+// ---------- Two-way sync (merge) ----------
+// Every record carries "updatedAt"; deletions are remembered in `tombstones`. Merging two copies
+// keeps, per record, whichever side changed it last. It is safe to merge the same file twice.
+const KINDS=["companies","applications","events"];
+const FIELDS={
+  companies:["id","company","contact","email","notes","linkedinViewed","archived"],
+  applications:["id","companyId","companyName","role","status","cvSentDate","webRegDate","priority","nextAction","reminderDate","jobUrl","followUpDays","interviewNotes"],
+  events:["id","appId","companyId","companyName","role","type","date","notes"]
+};
+const BOOLS=new Set(["linkedinViewed","archived","priority"]);
+const LONG=new Set(["notes","interviewNotes"]);
+const ID_FIELDS=new Set(["id","companyId","appId"]);
+const ID_RE=/^[A-Za-z0-9_.\-]{1,64}$/;
+const STAMP_RE=/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d{1,3})?Z$/;
+const LEGACY="2000-01-01T00:00:00.000Z";   // "never edited since sync was added"
+const MAX_ROWS=20000, MAX_SHORT=500, MAX_LONG=20000, TOMB_KEEP_DAYS=400;
+const SYNC_FORMAT="job-tracker-sync";
+
+let tombstones=[];      // [{kind,id,at}]
+let baseline=new Map(); // "kind:id" -> fingerprint of the record as last saved
+
+function recKey(kind,id){return kind+":"+id;}
+function fingerprint(kind,r){return JSON.stringify(FIELDS[kind].map(f=>r[f]===undefined||r[f]===null?"":r[f]));}
+function stampOf(r){return STAMP_RE.test(r&&r.updatedAt||"")?r.updatedAt:LEGACY;}
+function listOf(kind){return kind==="companies"?companies:kind==="applications"?applications:events;}
+
+// Call after loading data: remember what is already saved so later edits can be detected.
+function initBaseline(){
+  baseline=new Map();
+  for(const kind of KINDS)for(const r of listOf(kind)){
+    if(!STAMP_RE.test(r.updatedAt||""))r.updatedAt=LEGACY;
+    baseline.set(recKey(kind,r.id),fingerprint(kind,r));
+  }
+}
+
+// Call before saving after a user edit: stamps changed/new records, notes deletions.
+function stampChanges(){
+  const now=new Date().toISOString(), seen=new Set();
+  for(const kind of KINDS)for(const r of listOf(kind)){
+    const key=recKey(kind,r.id), fp=fingerprint(kind,r);
+    seen.add(key);
+    if(baseline.get(key)!==fp){r.updatedAt=now;baseline.set(key,fp);}
+    else if(!STAMP_RE.test(r.updatedAt||""))r.updatedAt=LEGACY;
+  }
+  for(const key of [...baseline.keys()]){
+    if(seen.has(key))continue;
+    const i=key.indexOf(":");
+    tombstones.push({kind:key.slice(0,i),id:key.slice(i+1),at:now});
+    baseline.delete(key);
+  }
+  tombstones=pruneTombstones(tombstones);
+}
+
+function pruneTombstones(list){
+  const cutoff=new Date(Date.now()-TOMB_KEEP_DAYS*864e5).toISOString(), latest=new Map();
+  for(const t of list){
+    if(t.at<cutoff)continue;
+    const k=recKey(t.kind,t.id), old=latest.get(k);
+    if(!old||t.at>old.at)latest.set(k,{kind:t.kind,id:t.id,at:t.at});
+  }
+  return [...latest.values()];
+}
+
+// Turn untrusted file contents into clean data, or throw an Error with a plain-English reason.
+function sanitizeSync(raw){
+  if(!raw||typeof raw!=="object"||Array.isArray(raw)||raw.format!==SYNC_FORMAT)
+    throw new Error("That isn't a Job Tracker sync file.");
+  if(typeof raw.version!=="number"||raw.version>1)
+    throw new Error("That sync file is from a newer version of Job Tracker. Update this copy first.");
+  const out={companies:[],applications:[],events:[],deleted:[]};
+  const future=new Date(Date.now()+864e5).toISOString();
+  const stamp=v=>{v=typeof v==="string"?v.trim():"";return STAMP_RE.test(v)?(v>future?new Date().toISOString():v):"";};
+  const text=(v,limit,label)=>{
+    if(v===null||v===undefined)return"";
+    if(typeof v==="object")throw new Error(label+": unexpected structured value.");
+    const s=String(v).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g,"");
+    if(s.length>limit)throw new Error(label+": text is too long.");
+    return s;
+  };
+  for(const kind of KINDS){
+    const rows=raw[kind]===undefined?[]:raw[kind];
+    if(!Array.isArray(rows))throw new Error("'"+kind+"' must be a list.");
+    if(rows.length>MAX_ROWS)throw new Error("Too many "+kind+" in that file.");
+    const seen=new Set();
+    rows.forEach((row,i)=>{
+      if(!row||typeof row!=="object"||Array.isArray(row))throw new Error(kind+" #"+(i+1)+": expected an object.");
+      const item={};
+      for(const f of FIELDS[kind]){
+        const label=kind+" #"+(i+1)+" "+f, v=row[f];
+        if(BOOLS.has(f))item[f]=v===true||/^(yes|true|1)$/i.test(String(v===undefined||v===null?"":v).trim());
+        else if(f==="followUpDays"){const n=parseInt(v,10);item[f]=Number.isFinite(n)?Math.max(0,Math.min(n,3650)):14;}
+        else if(ID_FIELDS.has(f)){
+          const s=text(v,64,label);
+          if(f==="id"&&!s)throw new Error(label+": id is required.");
+          if(s&&!ID_RE.test(s))throw new Error(label+": invalid id.");
+          item[f]=s;
+        }else item[f]=text(v,LONG.has(f)?MAX_LONG:MAX_SHORT,label);
+      }
+      if(seen.has(item.id))throw new Error(kind+": duplicate id in that file.");
+      seen.add(item.id);
+      item.updatedAt=stamp(row.updatedAt)||LEGACY;
+      out[kind].push(item);
+    });
+  }
+  const del=raw.deleted===undefined?[]:raw.deleted;
+  if(!Array.isArray(del)||del.length>MAX_ROWS*3)throw new Error("That file's deletion list is invalid.");
+  for(const t of del){
+    if(!t||typeof t!=="object"||!KINDS.includes(t.kind)||typeof t.id!=="string"||!ID_RE.test(t.id)||!stamp(t.at))
+      throw new Error("That file's deletion list is invalid.");
+    out.deleted.push({kind:t.kind,id:t.id,at:stamp(t.at)});
+  }
+  return out;
+}
+
+// Pure function: returns {data, report}. Does not touch the screen or storage.
+function mergeStates(local,remote){
+  const tomb=new Map();
+  for(const t of [...(local.deleted||[]),...(remote.deleted||[])]){
+    const k=recKey(t.kind,t.id);
+    if(!tomb.has(k)||t.at>tomb.get(k))tomb.set(k,t.at);
+  }
+  const data={companies:[],applications:[],events:[],deleted:[]};
+  const report={added:[],updated:[],removed:[],keptYours:0,orphans:[]};
+  for(const kind of KINDS){
+    const L=new Map((local[kind]||[]).map(r=>[r.id,r])), R=new Map((remote[kind]||[]).map(r=>[r.id,r]));
+    const ids=[...L.keys(),...[...R.keys()].filter(id=>!L.has(id))];
+    for(const id of ids){
+      const l=L.get(id), r=R.get(id), T=tomb.get(recKey(kind,id));
+      let pick, fromRemote=false;
+      if(l&&r){fromRemote=stampOf(r)>stampOf(l);pick=fromRemote?r:l;}
+      else if(l){pick=l;}
+      else{pick=r;fromRemote=true;}
+      if(T&&T>=stampOf(pick)){ if(l)report.removed.push({kind,rec:l}); continue; }
+      data[kind].push(pick);
+      const differs=l&&r&&fingerprint(kind,l)!==fingerprint(kind,r);
+      if(fromRemote){ if(!l)report.added.push({kind,rec:r}); else if(differs)report.updated.push({kind,before:l,rec:r}); }
+      else if(differs)report.keptYours++;
+    }
+  }
+  // A company deleted on one side can leave behind an application added on the other: drop the strays.
+  const cos=new Set(data.companies.map(c=>c.id));
+  data.applications=data.applications.filter(a=>{
+    if(!a.companyId||cos.has(a.companyId))return true;
+    report.orphans.push({kind:"applications",rec:a});return false;});
+  const apps=new Set(data.applications.map(a=>a.id));
+  data.events=data.events.filter(e=>{
+    if(!e.appId||apps.has(e.appId))return true;
+    report.orphans.push({kind:"events",rec:e});return false;});
+  for(const [k,at] of tomb){const i=k.indexOf(":");data.deleted.push({kind:k.slice(0,i),id:k.slice(i+1),at});}
+  data.deleted=pruneTombstones(data.deleted);
+  return {data,report};
+}
+
+function describeRec(kind,r){
+  if(kind==="companies")return r.company||"(unnamed company)";
+  if(kind==="applications")return (r.companyName?r.companyName+" — ":"")+(r.role||"(no role)");
+  return (r.companyName?r.companyName+" — ":"")+(ET[r.type]||r.type||"event")+(r.date?" ("+r.date+")":"");
+}
+function reportIsEmpty(rep){return !rep.added.length&&!rep.updated.length&&!rep.removed.length&&!rep.orphans.length;}
+/*SYNC-END*/
+
+let pendingImport=null;
+function openDataDialog(){
+  cancelImport();cancelSync();
+  document.getElementById("sync-intro").textContent=LOCAL
+    ?"Keep this phone and your computer in step. When you are back at your computer, tap Send my data and AirDrop (or email) the file to it, then choose it under Receive on the computer's tracker. Do the same the other way round to bring the computer's latest data here. Changes from both sides are combined, not overwritten."
+    :"Keep this computer and your phone in step. Click Send my data and AirDrop (or email) the file to your phone, then choose it under Receive in the phone's tracker. After using the phone, send its file back here and choose it under Receive. Changes from both sides are combined, not overwritten.";
+  refreshSyncStatus();
+  document.getElementById("data-dialog").showModal();
+}
+function refreshSyncStatus(){
+  const m=getMeta();
+  document.getElementById("sync-status").textContent="Last sent: "+niceTime(m.lastSent)+" · Last received: "+niceTime(m.lastReceived);
+  let u=null;try{u=JSON.parse(lsGet(LS_UNDO)||"null");}catch(e){}
+  const row=document.getElementById("sync-undo-row");
+  row.style.display=u&&u.data?"flex":"none";
+  if(u&&u.at)document.getElementById("sync-undo-label").textContent="Undo last merge ("+niceTime(u.at)+")";
+}
+
+// ----- sending -----
+function pad2(n){return String(n).padStart(2,"0");}
+function syncFileName(){
+  const d=new Date();
+  return "job-tracker-sync-"+d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate())+"-"+pad2(d.getHours())+pad2(d.getMinutes())+".json";
+}
+function syncBody(){
+  return {format:SYNC_FORMAT,version:1,exportedAt:new Date().toISOString(),source:LOCAL?"phone":"computer",
+    companies,applications,events,deleted:tombstones};
+}
+function buildSyncFile(type){
+  return new File([JSON.stringify(syncBody())],syncFileName(),{type:type||"application/json"});
+}
+async function sendSync(){
+  try{
+    // Some phones will only share certain file types, so try JSON first, then plain text.
+    for(const type of ["application/json","text/plain"]){
+      const file=buildSyncFile(type);
+      if(navigator.canShare&&navigator.canShare({files:[file]})){
+        try{await navigator.share({files:[file],title:"Job tracker sync"});setMeta({lastSent:new Date().toISOString()});refreshSyncStatus();return;}
+        catch(e){if(e&&e.name==="AbortError")return;}
+      }
+    }
+    saveFile(buildSyncFile("application/json"));
+    setMeta({lastSent:new Date().toISOString()});refreshSyncStatus();
+    showToast("Sync file saved to your downloads. Send it to your other device (AirDrop, email, Files). If you can't find it, use Copy as text.","info");
+  }catch(e){showToast("Could not create the sync file.","error");}
+}
+async function copySync(){
+  try{
+    await navigator.clipboard.writeText(JSON.stringify(syncBody()));
+    setMeta({lastSent:new Date().toISOString()});refreshSyncStatus();
+    showToast("Copied. Paste it into Notes, Messages or Mail, or straight into the other device if they share a clipboard.","success");
+  }catch(e){showToast("Your browser wouldn't copy it. Use Send my data instead.","error");}
+}
+
+// ----- receiving -----
+let pendingSync=null;
+function currentState(){return {companies,applications,events,deleted:tombstones};}
+function cancelSync(){
+  pendingSync=null;
+  const f=document.getElementById("sync-file");if(f)f.value="";
+  const pb=document.getElementById("sync-paste");if(pb)pb.value="";
+  document.getElementById("sync-confirm").style.display="none";
+}
+// "3 companies, 2 applications and 4 events"
+function kindCounts(items){
+  const words={companies:["company","companies"],applications:["application","applications"],events:["event","events"]};
+  const parts=KINDS.map(k=>{const n=items.filter(x=>x.kind===k).length;return n?n+" "+words[k][n===1?0:1]:"";}).filter(Boolean);
+  return parts.length>1?parts.slice(0,-1).join(", ")+" and "+parts[parts.length-1]:(parts[0]||"nothing");
+}
+// Names of companies and applications (events are only counted, to keep the list short)
+function listLines(items,heading){
+  const named=items.filter(x=>x.kind!=="events"), max=8;
+  const lines=named.slice(0,max).map(x=>"<li>"+esc(describeRec(x.kind,x.rec))+"</li>").join("");
+  const more=named.length>max?"<li>…and "+(named.length-max)+" more</li>":"";
+  return named.length?"<div class='sync-list'><strong>"+esc(heading)+"</strong><ul>"+lines+more+"</ul></div>":"";
+}
+async function previewSync(input){
+  const file=input.files&&input.files[0];
+  if(!file)return;
+  try{
+    if(file.size>10*1024*1024)throw new Error("That file is too large to be a sync file.");
+    showSyncPreview(await file.text());
+  }catch(e){
+    cancelSync();
+    showToast(e.message||"Could not read that file.","error");
+  }
+}
+function previewPasted(){
+  try{
+    const text=document.getElementById("sync-paste").value.trim();
+    if(!text)throw new Error("Paste the sync text first.");
+    if(text.length>10*1024*1024)throw new Error("That text is too large to be a sync file.");
+    showSyncPreview(text);
+  }catch(e){
+    cancelSync();
+    showToast(e.message||"Could not read that text.","error");
+  }
+}
+function showSyncPreview(text){
+  let raw;
+  try{raw=JSON.parse(text);}
+  catch(e){throw new Error("That isn't a Job Tracker sync file (it couldn't be read).");}
+  const remote=sanitizeSync(raw);
+  const res=mergeStates(currentState(),remote);
+  pendingSync=res;
+  const r=res.report, box=document.getElementById("sync-summary");
+  if(reportIsEmpty(r)){
+    box.innerHTML="Already up to date — this file has nothing new for this copy.";
+    document.getElementById("sync-merge-btn").style.display="none";
+  }else{
+    const parts=[];
+    if(r.added.length)parts.push("<strong>New:</strong> "+esc(kindCounts(r.added)));
+    if(r.updated.length)parts.push("<strong>Updated:</strong> "+esc(kindCounts(r.updated)));
+    if(r.removed.length)parts.push("<strong>Removed</strong> (deleted on the other device)<strong>:</strong> "+esc(kindCounts(r.removed)));
+    let html=parts.join("<br>");
+    if(r.keptYours)html+="<div class='sync-list'>"+r.keptYours+" record"+(r.keptYours===1?" here is":"s here are")+" newer than the file's, so yours "+(r.keptYours===1?"is":"are")+" kept.</div>";
+    html+=listLines(r.added,"New")+listLines(r.updated,"Updated (the file's version is newer)")+listLines(r.removed,"Removed");
+    if(r.orphans.length)html+="<div class='sync-list'><strong>"+r.orphans.length+" leftover record"+(r.orphans.length===1?"":"s")+" dropped</strong> because their company was deleted on the other device.</div>";
+    box.innerHTML=html;
+    document.getElementById("sync-merge-btn").style.display="";
+  }
+  document.getElementById("sync-confirm").style.display="block";
+}
+function applyState(d){
+  companies=d.companies;applications=d.applications;events=d.events;tombstones=d.deleted||[];
+  initBaseline();   // merged records keep their own timestamps
+}
+async function confirmSync(){
+  if(!pendingSync)return;
+  const merged=pendingSync.data;
+  if(!LOCAL){
+    try{
+      const r=await api("/api/backup",{method:"POST"});
+      if(!r.ok)throw new Error();
+    }catch(e){showToast("Could not make a safety copy first, so nothing was changed.","error");return;}
+  }
+  lsSet(LS_UNDO,JSON.stringify({at:new Date().toISOString(),data:currentState()}));
+  applyState(merged);
+  await persist();
+  setMeta({lastReceived:new Date().toISOString()});
+  cancelSync();
+  refreshSyncStatus();
+  renderBanner();renderList();
+  document.getElementById("data-dialog").close();
+  showToast("Merged. "+(LOCAL?"":"A safety copy was saved in the backups folder. ")+"You can undo this from Sync & backup.","success");
+}
+async function undoMerge(){
+  let u=null;try{u=JSON.parse(lsGet(LS_UNDO)||"null");}catch(e){}
+  if(!u||!u.data){refreshSyncStatus();return;}
+  if(!confirm("Undo the last merge? Anything you changed since then will be lost."))return;
+  try{
+    const d=sanitizeSync(Object.assign({format:SYNC_FORMAT,version:1},u.data));
+    applyState(d);
+    await persist();
+    lsDel(LS_UNDO);
+    refreshSyncStatus();renderBanner();renderList();
+    showToast("Last merge undone.","success");
+  }catch(e){showToast("Could not undo.","error");}
+}
+
+// ---------- Share / backup / restore (Excel, computer only) ----------
+async function fetchBackupFile(){
+  const r=await api("/api/export");
+  if(!r.ok)throw new Error(await errorText(r,"Could not create the backup."));
+  const blob=await r.blob();
+  return new File([blob],"job_tracker_"+today()+".xlsx",{type:blob.type||"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+function saveFile(file){
+  const url=URL.createObjectURL(file);
+  const a=document.createElement("a");
+  a.href=url;a.download=file.name;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function downloadData(){
+  try{saveFile(await fetchBackupFile());showToast("Backup downloaded.","success");}
+  catch(e){showToast(e.message||"Backup failed.","error");}
+}
+async function shareData(){
+  try{
+    const file=await fetchBackupFile();
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file],title:"Job tracker backup"});return;}
+      catch(e){if(e&&e.name==="AbortError")return;}
+    }
+    saveFile(file);
+    showToast("Sharing isn't available in this browser, so the file was downloaded instead.","info");
+  }catch(e){showToast(e.message||"Share failed.","error");}
+}
+function countsText(c){
+  const n=(k,one,many)=>c[k]+" "+(c[k]===1?one:many);
+  return n("companies","company","companies")+", "+n("applications","application","applications")+" and "+n("events","event","events");
+}
+async function sendImport(file,confirm){
+  const fd=new FormData();
+  fd.append("file",file);
+  if(confirm)fd.append("confirm","yes");
+  const r=await api("/api/import",{method:"POST",body:fd});
+  if(!r.ok)throw new Error(await errorText(r,"Could not read that file."));
+  return r.json();
+}
+async function previewImport(input){
+  const file=input.files&&input.files[0];
+  if(!file)return;
+  try{
+    const j=await sendImport(file,false);
+    pendingImport=file;
+    document.getElementById("import-summary").textContent=
+      "This file has "+countsText(j.incoming)+". You currently have "+countsText(j.current)+". "+
+      "Replacing will swap your data for the file's contents.";
+    document.getElementById("import-confirm").style.display="block";
+  }catch(e){
+    cancelImport();
+    showToast(e.message,"error");
+  }
+}
+function cancelImport(){
+  pendingImport=null;
+  document.getElementById("import-file").value="";
+  document.getElementById("import-confirm").style.display="none";
+}
+async function confirmImport(){
+  if(!pendingImport)return;
+  try{
+    await sendImport(pendingImport,true);
+    cancelImport();
+    document.getElementById("data-dialog").close();
+    await loadData();
+    showToast("Data restored. Your previous data was saved in the backups folder.","success");
+  }catch(e){showToast(e.message,"error");}
+}
+
+async function initConfig(){
+  if(LOCAL){
+    document.getElementById("excel-section").style.display="none";
+    document.getElementById("refresh-btn").style.display="none";
+    return;
+  }
+  try{
+    const r=await api("/api/config");
+    if(!r.ok)return;
+    const c=await r.json();
+    if(c.emailExport)document.getElementById("export-emails-btn").style.display="";
+  }catch(e){}
+}
+initConfig();
+loadData();
+</script>
+<script>
+(function(){
+  try{
+    var standalone=(window.navigator.standalone===true)||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches);
+    if(!standalone){var h=document.getElementById("install-hint");if(h)h.style.display="block";}
+    if(navigator.storage&&navigator.storage.persist){navigator.storage.persist();}
+  }catch(e){}
+  if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}
+})();
+</script>
+</body>
+</html>
