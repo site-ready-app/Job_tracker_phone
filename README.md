@@ -17,4 +17,4 @@ In the app tap **Sync / backup**. **Send my data** creates a small file you AirD
 your other device; **Receive** merges a file from the other device. Changes from both sides are
 combined, and you see a summary before anything changes.
 
-Version 2.1.1.
+Version 2.2.0.

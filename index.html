@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
-<script>window.JT_STATIC=true;window.JT_VERSION="2.1.1";</script>
+<script>window.JT_STATIC=true;window.JT_VERSION="2.2.0";</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
@@ -61,6 +61,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .app-actions{display:flex;gap:6px;flex-shrink:0;}
 .btn-sm{font-size:11px;padding:3px 8px;border:1px solid #d0d0ca;border-radius:6px;background:#fff;cursor:pointer;font-family:inherit;}
 .btn-sm:hover{background:#f5f5f0;}
+.app-hide{color:#666;flex-shrink:0;}
+.view-note{grid-column:1/-1;background:#f5f5f0;border:1px solid #e6e6df;border-radius:10px;padding:.55rem .9rem;font-size:13px;color:#555;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
 .btn-sm-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}
 .btn-sm-primary:hover{background:#333;}
 .add-app-row{padding:.6rem 1.25rem;background:#f8f8f4;}
@@ -266,6 +268,7 @@ dialog#data-dialog::backdrop{background:rgba(0,0,0,.4);}
       <button class="filter-pill" data-f="cvsent"><i class="ti ti-send"></i> CV sent</button>
       <button class="filter-pill" data-f="applications"><i class="ti ti-table"></i> Applications</button>
       <button class="filter-pill" data-f="archived"><i class="ti ti-archive"></i> Archived</button>
+      <button class="filter-pill" data-f="hidden"><i class="ti ti-eye-off"></i> Hidden</button>
       </div>
       <span class="tb-spacer" style="flex:1"></span>
       <div class="sort-row">
@@ -350,7 +353,7 @@ dialog#data-dialog::backdrop{background:rgba(0,0,0,.4);}
   <div id="sync-section">
     <p id="sync-intro"></p>
     <div class="dlg-row">
-      <button id="sync-send-btn" class="btn-primary" onclick="sendSync()"><i class="ti ti-send"></i> Send my data&hellip;</button>
+      <button id="sync-send-btn" class="btn-primary" onclick="sendSync()"><i class="ti ti-send"></i> Send my data (AirDrop&hellip;)</button>
       <button id="sync-copy-btn" onclick="copySync()"><i class="ti ti-copy"></i> Copy as text</button>
     </div>
     <p><strong>Receive</strong> a file from your other device:</p>
@@ -550,6 +553,12 @@ async function persist(){
 
 function getCompany(id){return companies.find(c=>c.id===id);}
 function getAppsForCompany(cid){return applications.filter(a=>a.companyId===cid);}
+// Hidden applications stay saved but are left out of the lists, counts and alerts. The "Hidden"
+// filter is the only place they appear.
+function inHiddenView(){return filterStatus==="hidden";}
+function shownApps(cid){return getAppsForCompany(cid).filter(a=>!a.hidden);}
+function listApps(cid){return getAppsForCompany(cid).filter(a=>inHiddenView()?a.hidden:!a.hidden);}
+function companyAllHidden(c){const all=getAppsForCompany(c.id);return all.length>0&&all.every(a=>a.hidden);}
 function getEventsForApp(aid){return events.filter(e=>e.appId===aid).sort((a,b)=>(a.date||"").localeCompare(b.date||""));}
 
 function deriveAppStatus(app){
@@ -562,7 +571,7 @@ function deriveAppStatus(app){
 }
 
 function deriveCompanyStatus(cid){
-  const apps=getAppsForCompany(cid);
+  const apps=listApps(cid);
   if(!apps.length)return"waiting";
   const statuses=apps.map(a=>deriveAppStatus(a));
   if(statuses.includes("offer"))return"offer";
@@ -622,8 +631,8 @@ function sortCompanies(list){
 }
 
 function renderStatBar(){
-  const active=companies.filter(c=>!c.archived);
-  const allApps=applications.filter(a=>!getCompany(a.companyId)?.archived);
+  const active=companies.filter(c=>!c.archived&&!companyAllHidden(c));
+  const allApps=applications.filter(a=>!a.hidden&&!getCompany(a.companyId)?.archived);
   const waiting=allApps.filter(a=>deriveAppStatus(a)==="waiting").length;
   const replied=allApps.filter(a=>deriveAppStatus(a)==="replied").length;
   const interview=allApps.filter(a=>deriveAppStatus(a)==="interview").length;
@@ -660,9 +669,11 @@ function setFilter(f){
 }
 
 function matchesFilter(company){
-  const apps=getAppsForCompany(company.id);
+  const everyApp=getAppsForCompany(company.id), apps=everyApp.filter(a=>!a.hidden);
   if(filterStatus==="archived")return company.archived;
   if(company.archived)return false;
+  if(filterStatus==="hidden")return everyApp.some(a=>a.hidden);
+  if(everyApp.length&&!apps.length)return false;   // everything here is hidden
   if(filterStatus==="all")return true;
   if(filterStatus==="priority")return apps.some(a=>a.priority);
   if(filterStatus==="linkedin")return company.linkedinViewed;
@@ -678,20 +689,20 @@ function renderList(){
   const search=(document.getElementById("search-input").value||"").toLowerCase();
   let filtered=companies.filter(c=>matchesFilter(c));
   if(search){filtered=filtered.filter(c=>{
-    const apps=getAppsForCompany(c.id);
+    const apps=listApps(c.id);
     return(c.company||"").toLowerCase().includes(search)||
       (c.contact||"").toLowerCase().includes(search)||
       apps.some(a=>(a.role||"").toLowerCase().includes(search));
   });}
   const sorted=sortCompanies(filtered);
   const el=document.getElementById("entry-list");
-  if(!sorted.length){el.style.display="grid";el.innerHTML=`<div class="empty" style="grid-column:1/-1;"><div style="font-size:40px;margin-bottom:.5rem">&#127970;</div>${companies.length?"No entries match.":"No companies yet."}</div>`;return;}
+  if(!sorted.length){el.style.display="grid";el.innerHTML=`<div class="empty" style="grid-column:1/-1;"><div style="font-size:40px;margin-bottom:.5rem">&#127970;</div>${filterStatus==="hidden"?"Nothing is hidden.":companies.length?"No entries match.":"No companies yet."}</div>`;return;}
 
   if(filterStatus==="applications"){renderApplicationsTable(sorted,el);return;}
 
   el.style.display="grid";
-  el.innerHTML=sorted.map(c=>{
-    const apps=getAppsForCompany(c.id);
+  el.innerHTML=viewBanner(sorted)+sorted.map(c=>{
+    const apps=listApps(c.id);
     const hasPriority=apps.some(a=>a.priority);
     const status=deriveCompanyStatus(c.id);
     return`<div class="company-card ${hasPriority?"has-priority":""}" >
@@ -726,6 +737,7 @@ function renderList(){
               ${a.nextAction?`<span style="color:#5b3fbf;font-size:11px;"><i class="ti ti-arrow-right" style="font-size:11px;"></i> ${esc(a.nextAction)}</span>`:""}
             </div>
             <span class="badge b-${aStatus}">${aStatus==="waiting"?"Awaiting":aStatus.charAt(0).toUpperCase()+aStatus.slice(1)}</span>
+            <button class="btn-sm app-hide" title="${a.hidden?"Show this application again":"Hide this application"}" onclick="event.stopPropagation();setAppHidden('${a.id}',${a.hidden?"false":"true"})">${a.hidden?"Unhide":"Hide"}</button>
           </div>`;
         }).join(""):`<div class="app-row" style="color:#aaa;font-style:italic;">No applications yet</div>`}
 
@@ -737,10 +749,10 @@ function renderList(){
 function renderApplicationsTable(companyList,el){
   el.style.display="block";
   const rows=[];
-  companyList.forEach(c=>{getAppsForCompany(c.id).forEach(a=>rows.push({c,a}));});
+  companyList.forEach(c=>{listApps(c.id).forEach(a=>rows.push({c,a}));});
   if(!rows.length){el.innerHTML=`<div class="empty"><div style="font-size:40px;margin-bottom:.5rem">&#128203;</div>No applications yet.</div>`;return;}
   el.innerHTML=`<table class="apps-table">
-    <thead><tr><th>Company</th><th>Role(s) applied for</th><th>CV sent</th><th>Last reply</th><th>Status / next action</th></tr></thead>
+    <thead><tr><th>Company</th><th>Role(s) applied for</th><th>CV sent</th><th>Last reply</th><th>Status / next action</th><th></th></tr></thead>
     <tbody>
     ${rows.map(({c,a})=>{
       const status=deriveAppStatus(a);
@@ -754,6 +766,7 @@ function renderApplicationsTable(companyList,el){
         <td class="${cvDate?"":"col-muted"}">${cvDate?fmtDate(cvDate):"—"}</td>
         <td class="${replyDate?"":"col-muted"}">${replyDate?fmtDate(replyDate):"—"}</td>
         <td><span class="badge b-${status}">${statusLabel}</span>${a.nextAction&&a.nextAction!=="None"?` <span style="color:#5b3fbf;font-size:12px;">&#8594; ${esc(a.nextAction)}</span>`:""}</td>
+        <td><button class="btn-sm app-hide" onclick="event.stopPropagation();setAppHidden('${a.id}',true)">Hide</button></td>
       </tr>`;
     }).join("")}
     </tbody>
@@ -764,7 +777,7 @@ function openAppDetail(appId){
   currentAppId=appId;
   const a=applications.find(x=>x.id===appId);if(!a)return;
   const c=getCompany(a.companyId);
-  const status=deriveAppStatus(appId);
+  const status=deriveAppStatus(a);
   const evs=getEventsForApp(appId);
   document.getElementById("app-detail-title").textContent=`${c?c.company:""} — ${a.role}`;
   document.getElementById("interview-notes").value=a.interviewNotes||"";
@@ -820,6 +833,7 @@ function openAppDetail(appId){
     </div>
     <div class="form-group"><textarea id="new-evt-notes" placeholder="Notes (optional)" style="height:60px;font-size:13px;"></textarea></div>
     <div class="btn-row" style="margin-top:1rem;">
+      <button class="btn-warning" onclick="setAppHidden('${appId}',${a.hidden?"false":"true"})">${a.hidden?"&#128065; Unhide application":"&#128584; Hide application"}</button>
       <button class="btn-warning" onclick="archiveCompanyToggle('${a.companyId}')">${c?.archived?"&#128065; Unarchive company":"&#128193; Archive company"}</button>
       <button class="btn-danger" onclick="deleteCompany('${a.companyId}')">&#128465; Delete company</button>
     </div>`;
@@ -849,6 +863,31 @@ function deleteEvent(eid,aid){
 function togglePriority(appId){
   const idx=applications.findIndex(x=>x.id===appId);
   if(idx>-1){applications[idx].priority=!applications[idx].priority;saveData();openAppDetail(appId);}
+}
+
+function setAppHidden(appId,hide){
+  const a=applications.find(x=>x.id===appId);if(!a)return;
+  a.hidden=!!hide;
+  saveData();
+  showScreen("list-screen");renderList();
+  showToast(hide?"Hidden. You can bring it back from the Hidden filter.":"Showing again.","success");
+}
+function hideRejected(){
+  const targets=applications.filter(a=>!a.hidden&&!getCompany(a.companyId)?.archived&&deriveAppStatus(a)==="rejection");
+  if(!targets.length)return;
+  if(!confirm("Hide "+targets.length+" rejected application"+(targets.length===1?"":"s")+"? They stay saved, and you can bring them back from the Hidden filter."))return;
+  targets.forEach(a=>{a.hidden=true;});
+  saveData();setFilter("all");
+  showToast("Hidden "+targets.length+".","success");
+}
+// A short note above the list in the Hidden and Rejection views
+function viewBanner(list){
+  if(filterStatus==="hidden")return `<div class="view-note">Hidden applications are still saved, but they are left out of the lists, counts and reminders. Use <strong>Unhide</strong> to bring one back.</div>`;
+  if(filterStatus==="rejection"){
+    const n=list.reduce((t,c)=>t+listApps(c.id).filter(a=>deriveAppStatus(a)==="rejection").length,0);
+    if(n)return `<div class="view-note">${n} rejected application${n===1?"":"s"} showing. <button class="btn-sm" onclick="hideRejected()">Hide them all</button></div>`;
+  }
+  return "";
 }
 
 function archiveCompanyToggle(cid){
@@ -969,7 +1008,7 @@ function saveApp(){
     events.filter(e=>e.appId===editAppId).forEach(e=>e.role=role);
   } else {
     const newId="app_"+uid();
-    applications.push({id:newId,companyId:cid,companyName:c?c.company:"",role,jobUrl:document.getElementById("fa-joburl").value.trim(),cvSentDate:document.getElementById("fa-cvdate").value,webRegDate:document.getElementById("fa-webdate").value,nextAction:document.getElementById("fa-nextaction").value.trim(),reminderDate:document.getElementById("fa-reminder").value,followUpDays:parseInt(document.getElementById("fa-followup").value)||14,priority:document.getElementById("fa-priority").checked,status:"",interviewNotes:""});
+    applications.push({id:newId,companyId:cid,companyName:c?c.company:"",role,jobUrl:document.getElementById("fa-joburl").value.trim(),cvSentDate:document.getElementById("fa-cvdate").value,webRegDate:document.getElementById("fa-webdate").value,nextAction:document.getElementById("fa-nextaction").value.trim(),reminderDate:document.getElementById("fa-reminder").value,followUpDays:parseInt(document.getElementById("fa-followup").value)||14,priority:document.getElementById("fa-priority").checked,status:"",interviewNotes:"",hidden:false});
   }
   saveData();showScreen("list-screen");renderList();
 }
@@ -1083,10 +1122,10 @@ document.getElementById("save-interview-btn").addEventListener("click",()=>{
 const KINDS=["companies","applications","events"];
 const FIELDS={
   companies:["id","company","contact","email","notes","linkedinViewed","archived"],
-  applications:["id","companyId","companyName","role","status","cvSentDate","webRegDate","priority","nextAction","reminderDate","jobUrl","followUpDays","interviewNotes"],
+  applications:["id","companyId","companyName","role","status","cvSentDate","webRegDate","priority","nextAction","reminderDate","jobUrl","followUpDays","interviewNotes","hidden"],
   events:["id","appId","companyId","companyName","role","type","date","notes"]
 };
-const BOOLS=new Set(["linkedinViewed","archived","priority"]);
+const BOOLS=new Set(["linkedinViewed","archived","priority","hidden"]);
 const LONG=new Set(["notes","interviewNotes"]);
 const ID_FIELDS=new Set(["id","companyId","appId"]);
 const ID_RE=/^[A-Za-z0-9_.\-]{1,64}$/;
@@ -1242,8 +1281,8 @@ let pendingImport=null;
 function openDataDialog(){
   cancelImport();cancelSync();
   document.getElementById("sync-intro").textContent=LOCAL
-    ?"Keep this phone and your computer in step. When you are back at your computer, tap Send my data and AirDrop (or email) the file to it, then choose it under Receive on the computer's tracker. Do the same the other way round to bring the computer's latest data here. Changes from both sides are combined, not overwritten."
-    :"Keep this computer and your phone in step. Click Send my data and AirDrop (or email) the file to your phone, then choose it under Receive in the phone's tracker. After using the phone, send its file back here and choose it under Receive. Changes from both sides are combined, not overwritten.";
+    ?"Keep this phone and your computer in step. When you are back at your computer, tap Send my data, pick AirDrop in the box that opens, and choose your computer. Then choose the file under Receive on the computer's tracker. Do the same the other way round to bring the computer's latest data here. Changes from both sides are combined, not overwritten."
+    :"Keep this computer and your phone in step. Click Send my data, pick AirDrop in the box that opens, and choose your phone. Then choose the file under Receive in the phone's tracker. After using the phone, send its file back here and choose it under Receive. Changes from both sides are combined, not overwritten.";
   refreshSyncStatus();
   document.getElementById("data-dialog").showModal();
 }
@@ -1270,19 +1309,36 @@ function syncBody(){
 function buildSyncFile(type){
   return new File([JSON.stringify(syncBody())],syncFileName(),{type:type||"application/json"});
 }
+// Opens the phone's / Mac's own share box (AirDrop, Messages, Mail, Files...) with the sync file
+// already in it. The browser only allows that straight from a tap, so nothing slow may come before it.
+function markSent(){setMeta({lastSent:new Date().toISOString()});refreshSyncStatus();}
 async function sendSync(){
+  let why="";
   try{
-    // Some phones will only share certain file types, so try JSON first, then plain text.
-    for(const type of ["application/json","text/plain"]){
-      const file=buildSyncFile(type);
-      if(navigator.canShare&&navigator.canShare({files:[file]})){
-        try{await navigator.share({files:[file],title:"Job tracker sync"});setMeta({lastSent:new Date().toISOString()});refreshSyncStatus();return;}
-        catch(e){if(e&&e.name==="AbortError")return;}
+    const canShareFile=f=>{try{return !!(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]}));}catch(_){return false;}};
+    // Some browsers will only share certain file types, so try JSON first, then plain text.
+    const tries=[buildSyncFile("application/json"),buildSyncFile("text/plain")];
+    if(!navigator.share)why="this browser has no share box";
+    else if(!tries.some(canShareFile))why="this browser won't share files";
+    for(const file of tries){
+      if(!canShareFile(file))continue;
+      try{await navigator.share({files:[file]});markSent();return;}
+      catch(e){
+        if(e&&e.name==="AbortError")return;           // you closed the share box
+        why="the share box said "+((e&&e.name)||"no");
       }
     }
+    // No share box. On the computer, save the file in the "sync-outbox" folder and select it in
+    // Finder so it is one right-click from AirDrop.
+    if(!LOCAL){
+      try{
+        const r=await api("/api/sync-outbox",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(syncBody())});
+        if(r.ok){markSent();showToast("The sync file is selected in Finder. Right-click it, choose Share, then AirDrop.","success");return;}
+      }catch(_){}
+    }
     saveFile(buildSyncFile("application/json"));
-    setMeta({lastSent:new Date().toISOString()});refreshSyncStatus();
-    showToast("Sync file saved to your downloads. Send it to your other device (AirDrop, email, Files). If you can't find it, use Copy as text.","info");
+    markSent();
+    showToast("Saved to your downloads ("+(why||"no share box")+"). Send it by AirDrop, email or Files, or use Copy as text.","info");
   }catch(e){showToast("Could not create the sync file.","error");}
 }
 async function copySync(){
